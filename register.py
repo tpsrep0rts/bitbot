@@ -29,8 +29,8 @@ class Register:
       date_string = datetime.datetime.fromtimestamp(row[2]).strftime('%Y-%m-%d %H:%M:%S')
       print str(row[0]) + "\t" + str(row[1]) + "\t" + date_string
 
-  def insert(self, usd, btc, time):
-    query = "INSERT INTO currency_register (usd, btc, time) VALUES ('{usd_change}', '{btc_change}', '{trade_time}');"\
+  def insert(self, usd, btc, trade_time):
+    query = "INSERT INTO currency_register (usd_change, btc_change, trade_time) VALUES ('{usd_change}', '{btc_change}', '{trade_time}');"\
         .format(usd_change=usd, btc_change=btc, trade_time=trade_time)
     self.c.execute(query)
 
