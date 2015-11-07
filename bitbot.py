@@ -54,11 +54,6 @@ class BitBot:
         print "Error querying Bitstamp API"
       time.sleep(self.REFRESH_INTERVAL)
 
-
-  def __enter__(self):
-
-    return self
-
   def __del__(self):
     self.conn.commit()
     self.conn.close()
