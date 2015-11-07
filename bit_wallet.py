@@ -10,6 +10,7 @@ class BitWallet:
 
   def purchase_bitcoin(self, bitcoin_qty, bitcoin_price):
     dollar_cost = bitcoin_qty * bitcoin_price
+    self.dollars -= dollar_cost
     self.bitcoin_records.append( [bitcoin_qty, bitcoin_price, dollar_cost, int(time.time())] )
 
   def convert_bitcoin_by_index(self, index, bitcoin_pct, bitcoin_price):
