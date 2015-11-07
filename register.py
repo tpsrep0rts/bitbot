@@ -31,20 +31,21 @@ class Register:
 
   def insert(self, usd, btc, time):
     query = "INSERT INTO currency_register (usd, btc, time) VALUES ('{usd_change}', '{btc_change}', '{trade_time}');"\
-        .format(usd_change=usd, btc_change=btc, trade_time=trade_time))
+        .format(usd_change=usd, btc_change=btc, trade_time=trade_time)
     self.c.execute(query)
 
   def menu(self):
     print "(D)eposit USD, (W)ithdraw USD, (B)uy BTC, (S)ell BTC\r >" 
-    self.choice = msvcrt.getch()
-    if str.lower(self.choice) == d
-      self.insert(5,0,int(time.time())
-    if str.lower(self.choice) == w
-      self.insert(-5,0,int(time.time())
-    if str.lower(self.choice) == b
-      self.insert(-2,0.05,int(time.time())
-    if str.lower(self.choice) == s
-      self.insert(3,-0.05,int(time.time())
+    self.choice = msvcrt.getch().lower()
+
+    if self.choice == "d":
+      self.insert(5, 0, int(time.time())
+    elif self.choice == "w":
+      self.insert(-5, 0, int(time.time())
+    elif self.choice == "b":
+      self.insert(-2, 0.05, int(time.time())
+    elif self.choice == "s":
+      self.insert(3, -0.05, int(time.time())
 
   def start(self):
     while True:
