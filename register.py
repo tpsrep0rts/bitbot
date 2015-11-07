@@ -8,7 +8,7 @@ import msvcrt #for testing menu
 class Register:
   """Currency Register"""
 
-  
+  REFRESH_INTERVAL = 5
   CREATE_TABLE_QUERY = "CREATE TABLE currency_register(id INTEGER PRIMARY KEY AUTOINCREMENT, usd_change FLOAT, btc_change FLOAT, trade_time INTEGER);"
 
   def __init__(self):
@@ -37,15 +37,15 @@ class Register:
   def menu(self):
     print "(D)eposit USD, (W)ithdraw USD, (B)uy BTC, (S)ell BTC\r >" 
     self.choice = msvcrt.getch().lower()
-
+    current_time = int(time.time())
     if self.choice == "d":
-      self.insert(5, 0, int(time.time())
+      self.insert(5, 0, current_time)
     elif self.choice == "w":
-      self.insert(-5, 0, int(time.time())
+      self.insert(-5, 0, current_time)
     elif self.choice == "b":
-      self.insert(-2, 0.05, int(time.time())
+      self.insert(-2, 0.05, current_time)
     elif self.choice == "s":
-      self.insert(3, -0.05, int(time.time())
+      self.insert(3, -0.05, current_time)
 
   def start(self):
     while True:
@@ -56,11 +56,12 @@ class Register:
         #self.query_db(time.time() - self.SECONDS_PER_HOUR, time.time())
       except requests.ConnectionError:
         print "Something went wrong"
-      #time.sleep(self.REFRESH_INTERVAL)
+      time.sleep(self.REFRESH_INTERVAL)
   
   def __del__(self):
     self.conn.commit()
     self.conn.close()
 
 register = Register()
+register.initialize_db()
 register.start()
