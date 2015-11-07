@@ -34,7 +34,6 @@ class BitBot:
     return self
 
   def __del__(self):
-    print "Cleaning up"
     self.conn.commit()
     self.conn.close()
 
