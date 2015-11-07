@@ -47,14 +47,19 @@ class BitBot:
   def start(self):
     print "Price\tTime"
     current_time = int(time.time())
-    self.query_db(current_time-self.QUERY_INTERVAL,current_time)
+    self.query_db(current_time - self.QUERY_INTERVAL, current_time)
+    last_price = "0.00"
+    
     while True:
       try:
         current_price = self.query_bitstamp()
         current_time = int(time.time())
-        self.insert(current_price, current_time)
         date_string = datetime.datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
         print "{:.2f}".format(current_price)  + "\t" + date_string
+
+        if(last_price != current_price):
+          self.insert(current_price, current_time)
+          last_price = current_price
       except requests.ConnectionError:
         print "Error querying Bitstamp API"
       time.sleep(self.REFRESH_INTERVAL)
