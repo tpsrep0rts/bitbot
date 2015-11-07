@@ -1,6 +1,6 @@
 import time
 
-class BitcoinTrader:
+class BitcoinTrader(object):
   """Base class for Bitcoin trading behaviors"""
   ACTION_BUY = "buy"
   ACTION_SELL = "sell"
@@ -41,8 +41,23 @@ class ContentTrader(BitcoinTrader):
   def compute_recommended_action(self):
     return self.ACTION_HOLD
 
-class HoldUntilDecline(BitcoinTrader):
-  """Does not recommending adjusting the portfolio"""
+class HoldUntilDeclineAmt(BitcoinTrader):
+  """Holds Bitcoin until it begins to decline"""
+
+  def __init__(self, db_results, decline_amt):
+  	super(HoldUntilDeclineAmt, self).__init__(db_results)
+  	self.decline_amt = decline_amt
+
+  def compute_recommended_action(self):
+    return self.ACTION_HOLD #Fill out this logic based on historical_data
+
+class HoldUntilDeclinePct(BitcoinTrader):
+  """Holds Bitcoin until it begins to decline"""
+
+  def __init__(self, db_results, decline_pct):
+  	super(HoldUntilDeclinePct, self).__init__(db_results)
+  	self.decline_pct = decline_pct
+
   def compute_recommended_action(self):
     return self.ACTION_HOLD #Fill out this logic based on historical_data
 

@@ -60,7 +60,8 @@ class BitBot:
     TraderManager.add_trader(ContentTrader(db_results))
     TraderManager.add_trader(BullTrader(db_results))
     TraderManager.add_trader(BearTrader(db_results))
-    TraderManager.add_trader(HoldUntilDecline(db_results))
+    TraderManager.add_trader(HoldUntilDeclineAmt(db_results, 1.0))
+    TraderManager.add_trader(HoldUntilDeclinePct(db_results, 1.0))
 
   def start(self):
     self.last_price = "0.00"
@@ -78,10 +79,8 @@ class BitBot:
       current_price =self.format_dollars(self.query_bitstamp())
       TraderManager.add_bitcoin_data(current_price)
 
-
       current_time = int(time.time())
       date_string = datetime.datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
-
 
       recommendations = TraderManager.compute_recommended_actions()
 
