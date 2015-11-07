@@ -32,7 +32,8 @@ class BitBot:
     all_rows = self.c.fetchall()
     for row in all_rows:
       date_string = datetime.datetime.fromtimestamp(row[1]).strftime('%Y-%m-%d %H:%M:%S')
-      print "{:.2f}".format(row[2])  + "\t" + date_string
+      self.last_price = "{:.2f}".format(row[2])
+      print self.last_price + "\t" + date_string
 
   def insert(self, price, time):
     query = "INSERT INTO bitcoin_prices (quote_time, price) VALUES ('{quote_time}', '{quote_price}');"\
@@ -48,18 +49,17 @@ class BitBot:
     print "Price\tTime"
     current_time = int(time.time())
     self.query_db(current_time - self.QUERY_INTERVAL, current_time)
-    last_price = "0.00"
-    
+
     while True:
       try:
-        current_price = self.query_bitstamp()
+        current_price = "{:.2f}".format(self.query_bitstamp())
         current_time = int(time.time())
         date_string = datetime.datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
-        print "{:.2f}".format(current_price)  + "\t" + date_string
+        print current_price  + "\t" + date_string
 
-        if(last_price != current_price):
+        if(self.last_price != current_price):
           self.insert(current_price, current_time)
-          last_price = current_price
+          self.last_price = current_price
       except requests.ConnectionError:
         print "Error querying Bitstamp API"
       time.sleep(self.REFRESH_INTERVAL)
