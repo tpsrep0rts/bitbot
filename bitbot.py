@@ -1,8 +1,10 @@
-import os
+import os, sys
 import sqlite3
 import time
 import datetime
 import requests,json
+import utils
+import warnings
 
 class BitBot:
   """Bitcoin trading bot"""
@@ -26,29 +28,35 @@ class BitBot:
     except sqlite3.OperationalError as e:
       print "sqlite3 error: " + str(e)
 
-  def query_db(self, min_time, max_time):
-    self.c.execute('SELECT * FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time}'.\
-        format(min_quote_time=min_time, max_quote_time=max_time))
-    all_rows = self.c.fetchall()
-    for row in all_rows:
-      date_string = datetime.datetime.fromtimestamp(row[1]).strftime('%Y-%m-%d %H:%M:%S')
-      self.last_price = "{:.2f}".format(row[2])
-      print self.last_price + "\t" + date_string
-
   def insert(self, price, time):
     query = "INSERT INTO bitcoin_prices (quote_time, price) VALUES ('{quote_time}', '{quote_price}');"\
         .format(quote_time=time, quote_price=price)
     self.c.execute(query)
 
   def query_bitstamp(self):
-    r = requests.get(self.BITSTAMP_URL)
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      r = requests.get(self.BITSTAMP_URL)
     priceFloat = float(json.loads(r.text)['last'])
     return priceFloat
 
+  def query_db(self, min_time, max_time):
+    self.c.execute('SELECT * FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time}'.\
+        format(min_quote_time=min_time, max_quote_time=max_time))
+    return self.c.fetchall()
+
+  def print_db_results(self, db_results):
+    for row in db_results:
+      date_string = datetime.datetime.fromtimestamp(row[1]).strftime('%Y-%m-%d %H:%M:%S')
+      self.last_price = "{:.2f}".format(row[2])
+      print self.last_price + "\t" + date_string
+
   def start(self):
+    self.last_price = "0.00"
     print "Price\tTime"
     current_time = int(time.time())
-    self.query_db(current_time - self.QUERY_INTERVAL, current_time)
+    db_results = self.query_db(current_time - self.QUERY_INTERVAL, current_time)
+    self.print_db_results(db_results)
 
     while True:
       try:
