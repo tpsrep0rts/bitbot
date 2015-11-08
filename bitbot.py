@@ -13,7 +13,7 @@ class BitBot:
   BITSTAMP_URL = 'http://www.bitstamp.net/api/ticker/'
   SECONDS_PER_MINUTE = 60
   SECONDS_PER_HOUR = 3600
-  REFRESH_INTERVAL = 1
+  REFRESH_INTERVAL = 5
   QUERY_INTERVAL = 300
   DROP_TABLE_QUERY = "DROP TABLE bitcoin_prices;"
   CREATE_TABLE_QUERY = "CREATE TABLE bitcoin_prices(id INTEGER PRIMARY KEY AUTOINCREMENT, quote_time INTEGER , price FLOAT);"
@@ -73,25 +73,26 @@ class BitBot:
 
     while True:
       self.on_awake()
+      time.sleep(self.REFRESH_INTERVAL)
 
   def on_awake(self):
     try:
       current_price =self.format_dollars(self.query_bitstamp())
-      TraderManager.add_bitcoin_data(current_price)
 
       current_time = int(time.time())
       date_string = datetime.datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
 
-      recommendations = TraderManager.compute_recommended_actions()
-
-      print current_price  + "\t" + date_string + " Recommendations: " + ",".join(recommendations)
-
       if(self.last_price != current_price):
+        TraderManager.add_bitcoin_data(current_price)
         self.insert(current_price, current_time)
         self.last_price = current_price
+        recommendations = TraderManager.compute_recommended_actions()
+        
+        print current_price  + "\t" + date_string + " Recommendations: " + ",".join(recommendations)
+      else:
+        print current_price  + "\t" + date_string
     except requests.ConnectionError:
       print "Error querying Bitstamp API"
-    time.sleep(self.REFRESH_INTERVAL)
 
   def __del__(self):
     self.conn.commit()
