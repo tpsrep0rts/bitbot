@@ -17,10 +17,10 @@ class BitcoinTrader(object):
     if length > self.MAX_HISTORY:
       del self.historical_data[:length - self.MAX_HISTORY]
 
-  def add_bitcoin_data(self, price, timestamp = 0):
+  def add_bitcoin_data(self, price, slope, timestamp = 0):
     if timestamp == 0:
       timestamp = int(time.time())
-    self.historical_data.append( (timestamp, price) )
+    self.historical_data.append( (timestamp, price, slope) )
     self.prune_history()
     
   def compute_recommended_action(self):

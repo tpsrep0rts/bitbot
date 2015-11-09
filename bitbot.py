@@ -16,7 +16,7 @@ class BitBot:
   REFRESH_INTERVAL = 5
   QUERY_INTERVAL = 300
   DROP_TABLE_QUERY = "DROP TABLE bitcoin_prices;"
-  CREATE_TABLE_QUERY = "CREATE TABLE bitcoin_prices(id INTEGER PRIMARY KEY AUTOINCREMENT, quote_time INTEGER , price FLOAT);"
+  CREATE_TABLE_QUERY = "CREATE TABLE bitcoin_prices(id INTEGER PRIMARY KEY AUTOINCREMENT, quote_time INTEGER, price FLOAT, slope FLOAT DEFAULT 0);"
 
   def __init__(self):
     self.conn = sqlite3.connect( os.getcwd() + os.path.sep + 'bitcoin.sqlite')
@@ -29,9 +29,9 @@ class BitBot:
     except sqlite3.OperationalError as e:
       print "sqlite3 error: " + str(e)
 
-  def insert(self, price, time):
-    query = "INSERT INTO bitcoin_prices (quote_time, price) VALUES ('{quote_time}', '{quote_price}');"\
-        .format(quote_time=time, quote_price=price)
+  def insert(self, price, time, slope):
+    query = "INSERT INTO bitcoin_prices (quote_time, price, slope) VALUES ('{quote_time}', '{quote_price}', '{quote_slope}');"\
+        .format(quote_time=time, quote_price=price, quote_slope=slope)
     self.c.execute(query)
 
   def query_bitstamp(self):
@@ -43,18 +43,21 @@ class BitBot:
     return priceFloat
 
   def query_db(self, min_time, max_time):
-    self.c.execute('SELECT quote_time, price FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time}'.\
+    self.c.execute('SELECT quote_time, price, slope FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time}'.\
         format(min_quote_time=min_time, max_quote_time=max_time))
     return self.c.fetchall()
 
   def print_db_results(self, db_results):
     for row in db_results:
       date_string = datetime.datetime.fromtimestamp(row[0]).strftime('%Y-%m-%d %H:%M:%S')
-      self.last_price = self.format_dollars(row[1])
-      print self.last_price + "\t" + date_string
+      self.last_price = row[1]
+      print date_string + "\t" + self.format_dollars(self.last_price) + "\t" + self.format_slope(row[2])
 
   def format_dollars(self, dollars):
     return  "{:.2f}".format(dollars)
+
+  def format_slope(self, slope):
+    return  "{:.6f}".format(slope)
 
   def register_traders(self, db_results):
     TraderManager.add_trader(ContentTrader(db_results))
@@ -63,9 +66,11 @@ class BitBot:
     TraderManager.add_trader(HoldUntilDeclineAmt(db_results, 1.0))
     TraderManager.add_trader(HoldUntilDeclinePct(db_results, 1.0))
 
-  def start(self):
-    self.last_price = "0.00"
-    print "Price\tTime"
+  def monitor(self):
+    self.last_price = 0.0
+    self.last_time = 0
+
+    print "Time\t\t\tPrice\tSlope\t\tRecommendation"
     current_time = int(time.time())
     db_results = self.query_db(current_time - self.QUERY_INTERVAL, current_time)
     self.print_db_results(db_results)
@@ -77,20 +82,24 @@ class BitBot:
 
   def on_awake(self):
     try:
-      current_price =self.format_dollars(self.query_bitstamp())
+      current_price = self.query_bitstamp()
 
       current_time = int(time.time())
       date_string = datetime.datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
 
-      if(self.last_price != current_price):
-        TraderManager.add_bitcoin_data(current_price)
-        self.insert(current_price, current_time)
+      if(self.last_price != current_price and self.last_time != current_time):
+      	slope = (current_price - self.last_price) / (current_time - self.last_time)
+        self.insert(current_price, current_time, slope)
+        TraderManager.add_bitcoin_data(current_price, slope)
+
         self.last_price = current_price
+        self.last_time = current_time
+
         recommendations = TraderManager.compute_recommended_actions()
-        
-        print current_price  + "\t" + date_string + " Recommendations: " + ",".join(recommendations)
+
+        print date_string + "\t" + self.format_dollars(current_price)  + "\t" + self.format_slope(slope) + "\t" + ",".join(recommendations)
       else:
-        print current_price  + "\t" + date_string
+        print date_string + "\t" + self.format_dollars(current_price)
     except requests.ConnectionError:
       print "Error querying Bitstamp API"
 
@@ -99,4 +108,4 @@ class BitBot:
     self.conn.close()
 
 bitbot = BitBot()
-bitbot.start()
+bitbot.monitor()
