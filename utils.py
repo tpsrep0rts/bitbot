@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import sys, os
+import sqlite3
 
 @contextmanager
 def suppress_stdout():
@@ -10,3 +11,16 @@ def suppress_stdout():
             yield
         finally:
             sys.stdout = old_stdout
+
+def connect_to_database(db_file_name):
+   return sqlite3.connect( os.getcwd() + os.path.sep + db_file_name)
+
+def close_database(conn):
+    conn.commit()
+    conn.close()
+
+def format_dollars(dollars):
+  return "{:.2f}".format(dollars)
+
+def format_slope(slope):
+  return  "{:.6f}".format(slope)

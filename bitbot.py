@@ -14,12 +14,14 @@ class BitBot:
   SECONDS_PER_MINUTE = 60
   SECONDS_PER_HOUR = 3600
   REFRESH_INTERVAL = 5
-  QUERY_INTERVAL = 300
+  QUERY_INTERVAL = 3600
   DROP_TABLE_QUERY = "DROP TABLE bitcoin_prices;"
   CREATE_TABLE_QUERY = "CREATE TABLE bitcoin_prices(id INTEGER PRIMARY KEY AUTOINCREMENT, quote_time INTEGER, price FLOAT, slope FLOAT DEFAULT 0);"
+  RECENT_PRICES_QUERY = 'SELECT quote_time, price, slope FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time} ORDER BY quote_time DESC'
+
 
   def __init__(self):
-    self.conn = sqlite3.connect( os.getcwd() + os.path.sep + 'bitcoin.sqlite')
+    self.conn = utils.connect_to_database('bitcoin.sqlite')
     self.c = self.conn.cursor()
 
   def initialize_db(self):
@@ -39,25 +41,18 @@ class BitBot:
       warnings.simplefilter("ignore")
       r = requests.get(self.BITSTAMP_URL)
     priceFloat = float(json.loads(r.text)['last'])
-    TraderManager.add_bitcoin_data(priceFloat)
     return priceFloat
 
   def query_db(self, min_time, max_time):
-    self.c.execute('SELECT quote_time, price, slope FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time}'.\
-        format(min_quote_time=min_time, max_quote_time=max_time))
+    self.c.execute(self.RECENT_PRICES_QUERY.format(min_quote_time=min_time, max_quote_time=max_time))
     return self.c.fetchall()
 
   def print_db_results(self, db_results):
     for row in db_results:
       date_string = datetime.datetime.fromtimestamp(row[0]).strftime('%Y-%m-%d %H:%M:%S')
       self.last_price = row[1]
-      print date_string + "\t" + self.format_dollars(self.last_price) + "\t" + self.format_slope(row[2])
+      print date_string + "\t" + utils.format_dollars(self.last_price) + "\t" + utils.format_slope(row[2])
 
-  def format_dollars(self, dollars):
-    return  "{:.2f}".format(dollars)
-
-  def format_slope(self, slope):
-    return  "{:.6f}".format(slope)
 
   def register_traders(self, db_results):
     TraderManager.add_trader(ContentTrader(db_results))
@@ -80,32 +75,32 @@ class BitBot:
       self.on_awake()
       time.sleep(self.REFRESH_INTERVAL)
 
+  def on_price_change(self, current_price):
+    current_time = int(time.time())
+    if self.last_time != current_time:
+      TraderManager.add_bitcoin_data(current_price)
+      slope = (current_price - self.last_price) / (current_time - self.last_time)
+      self.insert(current_price, current_time, slope)
+      TraderManager.add_bitcoin_data(current_price, slope)
+      recommendations = TraderManager.compute_recommended_actions()
+
+      date_string = datetime.datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
+      print date_string + "\t" + utils.format_dollars(current_price)  + "\t" + utils.format_slope(slope) + "\t" + ",".join(recommendations)
+      self.last_time = current_time
+
+
   def on_awake(self):
     try:
       current_price = self.query_bitstamp()
-
-      current_time = int(time.time())
-      date_string = datetime.datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
-
-      if(self.last_price != current_price and self.last_time != current_time):
-      	slope = (current_price - self.last_price) / (current_time - self.last_time)
-        self.insert(current_price, current_time, slope)
-        TraderManager.add_bitcoin_data(current_price, slope)
+      if utils.format_dollars(self.last_price) != utils.format_dollars(current_price):
+        self.on_price_change(current_price)
 
         self.last_price = current_price
-        self.last_time = current_time
-
-        recommendations = TraderManager.compute_recommended_actions()
-
-        print date_string + "\t" + self.format_dollars(current_price)  + "\t" + self.format_slope(slope) + "\t" + ",".join(recommendations)
-      else:
-        print date_string + "\t" + self.format_dollars(current_price)
     except requests.ConnectionError:
       print "Error querying Bitstamp API"
 
   def __del__(self):
-    self.conn.commit()
-    self.conn.close()
+    utils.close_database(self.conn)
 
 bitbot = BitBot()
 bitbot.monitor()
