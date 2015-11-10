@@ -100,7 +100,8 @@ class BitBot:
       print "Error querying Bitstamp API"
 
   def __del__(self):
-    utils.close_database(self.conn)
+    self.conn.commit()
+    self.conn.close()
 
 bitbot = BitBot()
 bitbot.monitor()
