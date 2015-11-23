@@ -6,6 +6,7 @@ import requests,json
 import utils
 from bitcoin_trader import *
 import warnings
+import random
 
 class BitBot:
   """Bitcoin trading bot"""
@@ -17,7 +18,7 @@ class BitBot:
   QUERY_INTERVAL = 3600
   DROP_TABLE_QUERY = "DROP TABLE bitcoin_prices;"
   CREATE_TABLE_QUERY = "CREATE TABLE bitcoin_prices(id INTEGER PRIMARY KEY AUTOINCREMENT, quote_time INTEGER, price FLOAT, slope FLOAT DEFAULT 0);"
-  RECENT_PRICES_QUERY = 'SELECT quote_time, price, slope FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time} ORDER BY quote_time DESC'
+  RECENT_PRICES_QUERY = 'SELECT quote_time, price, slope FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time} ORDER BY quote_time ASC'
 
 
   def __init__(self):
@@ -55,11 +56,7 @@ class BitBot:
 
 
   def register_traders(self, db_results):
-    TraderManager.add_trader(ContentTrader(db_results))
-    TraderManager.add_trader(BullTrader(db_results))
-    TraderManager.add_trader(BearTrader(db_results))
-    TraderManager.add_trader(HoldUntilDeclineAmt(db_results, 1.0))
-    TraderManager.add_trader(HoldUntilDeclinePct(db_results, 1.0))
+    TraderManager.add_trader(HighLowTrader(db_results, 0.1))
 
   def monitor(self):
     self.last_price = 0.0
@@ -78,14 +75,16 @@ class BitBot:
   def on_price_change(self, current_price):
     current_time = int(time.time())
     if self.last_time != current_time:
-      TraderManager.add_bitcoin_data(current_price)
       slope = (current_price - self.last_price) / (current_time - self.last_time)
       self.insert(current_price, current_time, slope)
-      TraderManager.add_bitcoin_data(current_price, slope)
+      TraderManager.add_bitcoin_data(current_price, slope, current_time)
       recommendations = TraderManager.compute_recommended_actions()
 
       date_string = datetime.datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
-      print date_string + "\t" + utils.format_dollars(current_price)  + "\t" + utils.format_slope(slope) + "\t" + ",".join(recommendations)
+      rec_string = ""
+      for rec in recommendations:
+        rec_string = rec_string + ", (" + rec[0] + "," + rec[1] + ")"
+      print date_string + "\t" + utils.format_dollars(current_price)  + "\t" + utils.format_slope(slope) + "\t" + rec_string
       self.last_time = current_time
 
 
@@ -96,6 +95,8 @@ class BitBot:
         self.on_price_change(current_price)
 
         self.last_price = current_price
+    except ValueError:
+      print "Error querying Bitstamp API"
     except requests.ConnectionError:
       print "Error querying Bitstamp API"
 
