@@ -37,8 +37,11 @@ class BitWallet:
   def convert_bitcoin_by_index(self, index, bitcoin_pct, bitcoin_price):
     amount = self.bitcoin_records[index][0] * bitcoin_pct * bitcoin_price
     self.dollars += amount
-    self.bitcoin_records[index][2] = self.bitcoin_records[index][2] + amount
-    self.bitcoin_records[index][0] = self.bitcoin_records[index][0] - self.bitcoin_records[index][0] * bitcoin_pct;
+    dcost = list(self.bitcoin_records[index])
+    dcost[2] += amount
+    dcost[0] -= dcost[0] * bitcoin_pct
+    #self.bitcoin_records[index][2] = self.bitcoin_records[index][2] + amount
+    #self.bitcoin_records[index][0] = self.bitcoin_records[index][0] - self.bitcoin_records[index][0] * bitcoin_pct;
 
     if bitcoin_pct == 1.0:
       del self.bitcoin_records[index:index+1]
@@ -63,11 +66,11 @@ wallet.purchase_bitcoin(0.5, 420.00)
 print wallet
 
 
-wallet.convert_bitcoin_by_index(0.0,0.5,500.00)
+wallet.convert_bitcoin_by_index(0,0.5,500.00)
 print wallet
 
-wallet.convert_bitcoin_by_index(0.0,0.5,500.00)
+wallet.convert_bitcoin_by_index(0,0.5,500.00)
 print wallet
 
-wallet.convert_bitcoin_by_index(0.0,1.0,500.00)
+wallet.convert_bitcoin_by_index(0,1.0,500.00)
 print wallet
