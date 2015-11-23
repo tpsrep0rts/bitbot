@@ -6,22 +6,30 @@ class BitcoinTrader(object):
   ACTION_SELL = "sell"
   ACTION_HOLD = "hold"
 
-  MAX_HISTORY = 2
+  MAX_HISTORY = 60
 
   def __init__(self, historical_data = []):
+    self.last_price = 0.0
+    self.last_slope = 0.0
+    length = len(historical_data)
+    if length > 0:
+      self.last_price = historical_data[length - 1][1]
+      self.last_slope = historical_data[length - 1][2]
+      
     self.historical_data = historical_data
     self.prune_history()
-
   def prune_history(self):
     length = len(self.historical_data)
     if length > self.MAX_HISTORY:
       del self.historical_data[:length - self.MAX_HISTORY]
 
-  def add_bitcoin_data(self, price, timestamp = 0):
+  def add_bitcoin_data(self, price, slope, timestamp = 0):
     if timestamp == 0:
       timestamp = int(time.time())
-    self.historical_data.append( (timestamp, price) )
+    self.historical_data = [(timestamp, price, slope)] + self.historical_data
     self.prune_history()
+    self.last_price = price
+    self.last_slope = slope
     
   def compute_recommended_action(self):
     return self.ACTION_HOLD
@@ -29,6 +37,7 @@ class BitcoinTrader(object):
 class BullTrader(BitcoinTrader):
   """Recommends buying Bitcoin for USD"""
   def compute_recommended_action(self):
+    
     return self.ACTION_BUY
 
 class BearTrader(BitcoinTrader):
