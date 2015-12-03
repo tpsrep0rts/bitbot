@@ -93,21 +93,23 @@ class HoldUntilDeclinePct(BitcoinTrader):
 class HighLowTrader(BitcoinTrader):
   """Buy low sell high"""
 
-  def __init__(self, db_results, threshold):
+  def __init__(self, db_results, threshold, min_earnings):
     super(HighLowTrader, self).__init__(db_results)
     self.threshold = threshold
+    self.min_earnings = min_earnings
 
   def compute_recommended_action(self):
     recommendation = self.ACTION_HOLD
     reason = "no action"
     new_reason = "Last Price: " + str(self.last_price) + ", Daily Minimum: " + str(self.min_price) + ", Daily Maximum: " + str(self.max_price) + ", Range: " + str(self.get_range()) + ", Threshold: " + str(self.threshold) + ", Min Threshold: " + str(self.min_price + self.threshold * self.get_range()) + ", Max Threshold: " + str(self.max_price - self.threshold * self.get_range())
     
-    if self.is_at_minimum(self.threshold):
-      recommendation = self.ACTION_BUY
-      reason = str(self.last_price) + " < " + str(self.min_price + self.threshold * self.get_range())
-    if self.is_at_maximum(self.threshold):
-      recommendation = self.ACTION_SELL
-      reason = str(self.last_price) + " > " + str(self.max_price - self.threshold * self.get_range())
+    if (self.max_price - self.min_price) >= self.min_earnings:
+      if self.is_at_minimum(self.threshold):
+        recommendation = self.ACTION_BUY
+        reason = str(self.last_price) + " < " + str(self.min_price + self.threshold * self.get_range())
+      if self.is_at_maximum(self.threshold):
+        recommendation = self.ACTION_SELL
+        reason = str(self.last_price) + " > " + str(self.max_price - self.threshold * self.get_range())
     return (recommendation, reason) #Fill out this logic based on historical_data
 
 class TraderManager:

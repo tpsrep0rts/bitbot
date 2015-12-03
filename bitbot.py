@@ -5,6 +5,7 @@ import datetime
 import requests,json
 import utils
 from bitcoin_trader import *
+from bitconfig import *
 import warnings
 import random
 
@@ -24,6 +25,7 @@ class BitBot:
   def __init__(self):
     self.conn = utils.connect_to_database('bitcoin.sqlite')
     self.c = self.conn.cursor()
+    self.config = BitConfig()
 
   def initialize_db(self):
     try:
@@ -56,7 +58,9 @@ class BitBot:
 
 
   def register_traders(self, db_results):
-    TraderManager.add_trader(HighLowTrader(db_results, 0.1))
+    min_earnings = self.config.getfloat("Trader", "minearningspershare")
+    trade_threshold = self.config.getfloat("Trader", "priceequivalencythreshold")
+    TraderManager.add_trader(HighLowTrader(db_results, trade_threshold, min_earnings))
 
   def monitor(self):
     self.last_price = 0.0
@@ -105,4 +109,5 @@ class BitBot:
     self.conn.close()
 
 bitbot = BitBot()
+bitbot.initialize_db()
 bitbot.monitor()
