@@ -47,7 +47,8 @@ class BitBot:
     return priceFloat
 
   def query_db(self, min_time, max_time):
-    self.c.execute(self.RECENT_PRICES_QUERY.format(min_quote_time=min_time, max_quote_time=max_time))
+    query = self.RECENT_PRICES_QUERY.format(min_quote_time=min_time, max_quote_time=max_time)
+    self.c.execute(query)
     return self.c.fetchall()
 
   def print_db_results(self, db_results):
@@ -109,5 +110,4 @@ class BitBot:
     self.conn.close()
 
 bitbot = BitBot()
-bitbot.initialize_db()
 bitbot.monitor()
