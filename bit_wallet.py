@@ -49,7 +49,6 @@ class BitWallet:
 
   def convert_bitcoin_by_index(self, index, bitcoin_qty, bitcoin_price):
     for i in self.bitcoin_records:
-      print i
       if i[0] == index:
         list_record = list(i)
     dollar_amount = bitcoin_qty * bitcoin_price
@@ -85,9 +84,11 @@ class BitWallet:
   
   def investment_finder(self, cur_price, margin):
     index_array = []
-    for i in range(len(self.bitcoin_records)):
-      print self.bitcoin_records[i]
-      index_array.append(i)
+    target_price = cur_price * (1-margin)
+    print "\nTarget price: " + str(target_price)
+    for i in self.bitcoin_records:
+      if i[2] <= target_price:
+        index_array.append(i)
     return index_array
 
   def __str__(self):
@@ -102,9 +103,10 @@ wallet = BitWallet(1000.00)
 wallet.initialize_db()
 wallet.query_db()
 wallet.add_dollars(500.00)
-wallet.purchase_bitcoin(1.5, 420.00)
-#wallet.investment_finder(400, 0.05)
-wallet.purchase_bitcoin(0.5, 420.00)
+wallet.purchase_bitcoin(1.5, 320.00)
+print wallet.investment_finder(400, 0.05)
+wallet.purchase_bitcoin(0.5, 350.00)
+print wallet.investment_finder(390, 0.05)
 wallet.convert_bitcoin_by_index(1,0.5,500.00)
 wallet.convert_bitcoin_by_index(1,1.0,500.00)
 wallet.convert_bitcoin_by_index(2,0.5,500.00)
