@@ -124,7 +124,7 @@ class BitWallet:
 
   def sell_bitcoin_by_index(self, index, current_bitcoin_price):
     list_record = self.bitcoin_records[index]
-    value = list_record.price * list_record.qty
+    value = current_bitcoin_price * list_record.qty
     profit = (current_bitcoin_price - list_record.price) * list_record.qty
 
     #Begin Transaction
