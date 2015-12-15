@@ -1,16 +1,48 @@
 import time
 import sqlite3
 import os
+import utils
+
+class BitWalletRecord(object):
+  QTY_INDEX = 0
+  PRICE_INDEX = 1
+  PURCHASE_TIME_INDEX = 2
+
+  def __init__(self, qty, price, purchase_time, index):
+    self.qty = qty
+    self.price = price
+    self.purchase_time = purchase_time
+    self.index = index
+
+
+  @staticmethod
+  def create(db_row, index):
+    return BitWalletRecord(db_row[BitWalletRecord.QTY_INDEX], db_row[BitWalletRecord.PRICE_INDEX], 
+                           db_row[BitWalletRecord.PURCHASE_TIME_INDEX], index)
+
+  def __str__(self):
+    return "index={index}, qty={qty}, price={price}, purchase_time={purchase_time}".format(index = self.index, qty = self.qty, price = self.price, purchase_time = self.purchase_time)
+
+class BitcoinSale(BitWalletRecord):
+  def __init__(self, qty, price, profit):
+    self.profit = profit
+    super(self.__class__, self).__init__(qty, price, time.time(), 0.0)
 
 class BitWallet:
   DROP_TABLE_QUERY = "DROP TABLE investments;"
-  CREATE_TABLE_QUERY = "CREATE TABLE investments(id INTEGER PRIMARY KEY AUTOINCREMENT, qty FLOAT, price FLOAT, standing FLOAT, purchase_time  INTEGER);"
+  CREATE_TABLE_QUERY = "CREATE TABLE investments(id INTEGER PRIMARY KEY AUTOINCREMENT, qty FLOAT, price FLOAT, purchase_time  INTEGER);"
+  SELECT_QUERY = "SELECT qty, price, purchase_time FROM investments"
+  INSERT_QUERY = "INSERT INTO investments (qty, price, purchase_time) VALUES ('{bitcoin_qty}', '{bitcoin_price}', '{ptime}');"
+  DELETE_QUERY = "DELETE FROM investments WHERE id='{id}';"
 
-  def __init__(self, dollars = 0, bitcoin_records = []):
+  def __init__(self, dollars = 0, reset_data = False):
     self.conn = sqlite3.connect( os.getcwd() + os.path.sep + 'investments.sqlite')
     self.c = self.conn.cursor()
     self.dollars = dollars
-    self.bitcoin_records = bitcoin_records
+
+    if(reset_data):
+      self.initialize_db()
+    self.sync_wallet_with_db()
 
   def initialize_db(self):
     try:
@@ -23,91 +55,117 @@ class BitWallet:
       print "sqlite3 error: " + str(e)      
 
   def query_db(self):
-    self.c.execute("SELECT * FROM investments")
-    self.bitcoin_records = self.c.fetchall()
-    print "\n\n All Records: " + str(self.bitcoin_records)
+    self.c.execute(self.SELECT_QUERY)
+    db_rows = self.c.fetchall()
+    return db_rows
+
+  def sync_wallet_with_db(self):
+    self.bitcoin_records = {}
+    self.add_db_records(self.query_db())
+
+  def add_db_record(self, record):
+    self.bitcoin_records[record.index] = record
+
+  def add_db_records(self, db_rows):
+    for index, db_row in enumerate(db_rows):
+      self.add_db_record(BitWalletRecord.create(db_row, index))
+
+  def get_account_value(self, current_bitcoin_price):
+    value = self.dollars
+    for index, record in self.bitcoin_records.items():
+      value += record.qty * current_bitcoin_price
+    return value
+
+  def print_status(self, current_bitcoin_price):
+    print "----------------------------------------------------------"
+    print "Account value: {value}".format(value = self.get_account_value(current_bitcoin_price))
+    print "----------------------------------------------------------"
+    print "Bitcoin value: {value}".format(value=current_bitcoin_price)
+    print "----------------------------------------------------------"
+    print "Cash: {cash}".format(cash=self.dollars)
+    print "----------------------------------------------------------"
+    for index, record in self.bitcoin_records.items():
+      print record
+    print "----------------------------------------------------------"
+    print "\n"
 
   def add_dollars(self, dollars):
     self.dollars += dollars
-    print "\n$" + str(dollars) + " added\n\n"
 
-  def purchase_bitcoin(self, bitcoin_qty, bitcoin_price):    
-    investment_standing = bitcoin_qty * bitcoin_price * -1
-    self.dollars += investment_standing
-    ptime = int(time.time())
-    self.bitcoin_records.append( [bitcoin_qty, bitcoin_price, investment_standing, ptime] )
-    query = "INSERT INTO investments (qty, price, standing, purchase_time) VALUES ('{bitcoin_qty}', '{bitcoin_price}', '{investment_standing}', '{ptime}');"\
-        .format(bitcoin_qty=bitcoin_qty, bitcoin_price=bitcoin_price, investment_standing=investment_standing, ptime = ptime)
+  def add_dollars(self, dollars):
+    self.dollars += dollars
+
+  def purchase_bitcoin(self, bitcoin_qty, bitcoin_price):
+    value = bitcoin_qty * bitcoin_price
+    if self.dollars >= value:
+      self.dollars -= value
+      ptime = int(time.time())
+      query = self.INSERT_QUERY.format(bitcoin_qty=bitcoin_qty, bitcoin_price=bitcoin_price, ptime = ptime)
+      try:
+        self.c.execute(query)
+        record = BitWalletRecord(bitcoin_qty, bitcoin_price, ptime, self.c.lastrowid)
+        self.add_db_record(record)
+        self.conn.commit()
+      except sqlite3.OperationalError as e:
+        print "sqlite3 error: " + str(e)
+      success = True
+    else:
+      success = False
+    return success
+
+  def delete_wallet_record_by_index(self, index):
+    query = self.DELETE_QUERY.format(id = index)
     try:
       self.c.execute(query)
-      self.conn.commit()      
-      print "\nPurchased " + str(bitcoin_qty) + " bitcoin @ " + str(bitcoin_price) +"\n"
-      self.query_db()
+      self.conn.commit()
+      del self.bitcoin_records[index]
     except sqlite3.OperationalError as e:
-      print "sqlite3 error: " + str(e)  
-    
+      print "sqlite3 error: " + str(e) 
 
-  def convert_bitcoin_by_index(self, index, bitcoin_qty, bitcoin_price):
-    for i in self.bitcoin_records:
-      if i[0] == index:
-        list_record = list(i)
-    dollar_amount = bitcoin_qty * bitcoin_price
-    self.dollars += dollar_amount    
-    list_record[3] += dollar_amount
-    list_record[1] -= bitcoin_qty
-    print "Selected record: " + str(list_record)
-    if list_record[1] == 0:      
-      query = "DELETE FROM investments WHERE id='{id}';"\
-          .format(id = index)
-      print "\n" + query
-      try:
-        self.c.execute(query)
-        self.conn.commit()
-        print "Investment removed with a profit of: $" + str(list_record[3])
-        self.query_db()             
-      except sqlite3.OperationalError as e:
-        print "sqlite3 error: " + str(e)     
-    #self.bitcoin_records[index] = list_record
-    elif list_record[1] > 0:
-      query = "UPDATE investments SET qty='{bitcoin_qty}', standing='{investment_standing}' WHERE id='{id}';"\
-          .format(bitcoin_qty=list_record[1], investment_standing=list_record[3], id = index)
-      #query = "UPDATE investments SET qty=(?), price=(?), standing=(?), purchase_time=(?) WHERE id=(?);"\
-      #    (list_record[1],list_record[2],list_record[3],list_record[4],index)   
-      print "\n" + query 
-      try:
-        self.c.execute(query)
-        self.conn.commit()
-        self.query_db()
-        print "\nConverted " + str(bitcoin_qty) + " bitcoin @ " + str(bitcoin_price) + " worth $" + str(dollar_amount) + "\n"      
-      except sqlite3.OperationalError as e:
-        print "sqlite3 error: " + str(e)     
-  
-  def investment_finder(self, cur_price, margin):
-    index_array = []
-    target_price = cur_price * (1-margin)
-    print "\nTarget price: " + str(target_price)
-    for i in self.bitcoin_records:
-      if i[2] <= target_price:
-        index_array.append(i)
-    return index_array
+  def sell_bitcoin_by_index(self, index, current_bitcoin_price):
+    list_record = self.bitcoin_records[index]
+    value = list_record.price * list_record.qty
+    profit = (current_bitcoin_price - list_record.price) * list_record.qty
 
-  def __str__(self):
-    return "\nRecords: " + str(self.bitcoin_records) + "\nDollars:" + str(self.dollars)
+    #Begin Transaction
+    self.add_dollars(value)
+    self.delete_wallet_record_by_index(list_record.index)
+    #End Transaction
+    return BitcoinSale(list_record.qty, list_record.price, profit)
+
+  def sell_bitcoin_by_target_price(self, target_price, current_bitcoin_price):
+    profit = 0.0
+    qty = 0.0
+    purchase_price = 0.0
+    for index, record in self.bitcoin_records.items():
+      if record.price <= target_price:
+        purchase_sale = self.sell_bitcoin_by_index(record.index, current_bitcoin_price)
+        profit += purchase_sale.profit
+        qty += purchase_sale.qty
+        purchase_price += purchase_sale.price
+
+    return BitcoinSale(qty, purchase_price, profit)
 
   def __del__(self):
     self.conn.commit()
     self.conn.close()
 
+reset_data = True
+starting_funds = 1000.00
+bitcoin_value = 100.00
 
-wallet = BitWallet(1000.00)
-wallet.initialize_db()
-wallet.query_db()
-wallet.add_dollars(500.00)
-wallet.purchase_bitcoin(1.5, 320.00)
-print wallet.investment_finder(400, 0.05)
-wallet.purchase_bitcoin(0.5, 350.00)
-print wallet.investment_finder(390, 0.05)
-wallet.convert_bitcoin_by_index(1,0.5,500.00)
-wallet.convert_bitcoin_by_index(1,1.0,500.00)
-wallet.convert_bitcoin_by_index(2,0.5,500.00)
-print(wallet)
+wallet = BitWallet(starting_funds, reset_data)
+wallet.print_status(bitcoin_value)
+
+wallet.purchase_bitcoin(1.0, bitcoin_value)
+wallet.print_status(bitcoin_value)
+
+bitcoin_value = 200.00
+wallet.purchase_bitcoin(1.0, bitcoin_value)
+wallet.print_status(bitcoin_value)
+
+bitcoin_value = 300.00
+purchase_sale = wallet.sell_bitcoin_by_target_price(150.00, bitcoin_value)
+print "----------------------------------------------------------"
+print "Sold {qty} BTC for profit of: {profit}".format(qty = purchase_sale.qty, profit=purchase_sale.profit)
+wallet.print_status(bitcoin_value)

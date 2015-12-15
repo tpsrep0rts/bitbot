@@ -2,6 +2,7 @@ from contextlib import contextmanager
 import sys, os
 import sqlite3
 
+ZERO = 0.000001
 @contextmanager
 def suppress_stdout():
     with open(os.devnull, "w") as devnull:
@@ -24,3 +25,6 @@ def format_dollars(dollars):
 
 def format_slope(slope):
   return  "{:.6f}".format(slope)
+
+def approximately_zero(value):
+  return value > -ZERO and value < ZERO
