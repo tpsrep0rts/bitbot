@@ -21,7 +21,7 @@ class BitWalletRecord(object):
                            db_row[BitWalletRecord.PURCHASE_TIME_INDEX], index)
 
   def __str__(self):
-    return "index={index}, qty={qty}, price={price}, purchase_time={purchase_time}".format(index = self.index, qty = self.qty, price = self.price, purchase_time = self.purchase_time)
+    return "index={index}, qty={qty}, price=${price}, purchase_time={purchase_time}".format(index = self.index, qty = self.qty, price = self.price, purchase_time = self.purchase_time)
 
 class BitcoinSale(BitWalletRecord):
   def __init__(self, qty, price, profit):
@@ -77,17 +77,16 @@ class BitWallet:
     return value
 
   def print_status(self, current_bitcoin_price):
-    print "----------------------------------------------------------"
-    print "Account value: {value}".format(value = self.get_account_value(current_bitcoin_price))
-    print "----------------------------------------------------------"
-    print "Bitcoin value: {value}".format(value=current_bitcoin_price)
-    print "----------------------------------------------------------"
-    print "Cash: {cash}".format(cash=self.dollars)
-    print "----------------------------------------------------------"
+    print "================================================================"
+    print "Account value: ${value}".format(value = self.get_account_value(current_bitcoin_price))
+    print "----------------------------------------------------------------"
+    print "Bitcoin value: ${value}".format(value=current_bitcoin_price)
+    print "----------------------------------------------------------------"
+    print "Cash: ${cash}".format(cash=self.dollars)
+    print "----------------------------------------------------------------"
     for index, record in self.bitcoin_records.items():
       print record
-    print "----------------------------------------------------------"
-    print "\n"
+    print "================================================================\n"
 
   def add_dollars(self, dollars):
     self.dollars += dollars
@@ -166,6 +165,7 @@ wallet.print_status(bitcoin_value)
 
 bitcoin_value = 300.00
 purchase_sale = wallet.sell_bitcoin_by_target_price(150.00, bitcoin_value)
-print "----------------------------------------------------------"
-print "Sold {qty} BTC for profit of: {profit}".format(qty = purchase_sale.qty, profit=purchase_sale.profit)
+print "================================================================"
+print "Sold {qty} BTC @ ${bitcoin_value} purchased for ${purchase_price} for profit of: ${profit}".format(bitcoin_value=bitcoin_value, purchase_price=purchase_sale.price, qty = purchase_sale.qty, profit=purchase_sale.profit)
+print "================================================================\n"
 wallet.print_status(bitcoin_value)
