@@ -6,6 +6,7 @@ import requests,json
 import utils
 from bitcoin_trader import *
 from bitconfig import *
+from bit_wallet import *
 import warnings
 import random
 
@@ -22,10 +23,16 @@ class BitBot:
   RECENT_PRICES_QUERY = 'SELECT quote_time, price, slope FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time} ORDER BY quote_time ASC'
 
 
-  def __init__(self):
+  def __init__(self, starting_cash):
     self.conn = utils.connect_to_database('bitcoin.sqlite')
     self.c = self.conn.cursor()
     self.config = BitConfig()
+
+    self.last_price = 0.0
+    self.last_time = 0
+    current_time = int(time.time())
+    self.db_results = self.query_db(current_time - self.QUERY_INTERVAL, current_time)
+    self.register_traders(self.db_results, starting_cash)
 
   def initialize_db(self):
     try:
@@ -58,21 +65,15 @@ class BitBot:
       print date_string + "\t" + utils.format_dollars(self.last_price) + "\t" + utils.format_slope(row[2])
 
 
-  def register_traders(self, db_results):
+  def register_traders(self, db_results, starting_cash):
     min_earnings = self.config.getfloat("Trader", "minearningspershare")
     trade_threshold = self.config.getfloat("Trader", "priceequivalencythreshold")
-    TraderManager.add_trader(HighLowTrader(db_results, trade_threshold, min_earnings))
+    wallet = BitWallet(starting_cash)
+    TraderManager.add_trader(HighLowTrader(wallet, db_results, trade_threshold, min_earnings))
 
   def monitor(self):
-    self.last_price = 0.0
-    self.last_time = 0
-
     print "Time\t\t\tPrice\tSlope\t\tRecommendation"
-    current_time = int(time.time())
-    db_results = self.query_db(current_time - self.QUERY_INTERVAL, current_time)
-    self.print_db_results(db_results)
-    self.register_traders(db_results)
-
+    self.print_db_results(self.db_results)
     while True:
       self.on_awake()
       time.sleep(self.REFRESH_INTERVAL)
@@ -109,5 +110,7 @@ class BitBot:
     self.conn.commit()
     self.conn.close()
 
-bitbot = BitBot()
+starting_cash = 1000.00
+
+bitbot = BitBot(starting_cash)
 bitbot.monitor()

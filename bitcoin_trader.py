@@ -1,4 +1,5 @@
 import time
+from utils import *
 
 class BitcoinTrader(object):
   """Base class for Bitcoin trading behaviors"""
@@ -8,11 +9,12 @@ class BitcoinTrader(object):
 
   MAX_HISTORY = 60
 
-  def __init__(self, historical_data = []):
+  def __init__(self, wallet, historical_data = []):
     self.last_price = 0.0
     self.last_slope = 0.0
     self.max_price = 0.0
     self.min_price = 999999999.0
+    self.wallet = wallet
 
     self.historical_data = []
 
@@ -73,8 +75,8 @@ class ContentTrader(BitcoinTrader):
 class HoldUntilDeclineAmt(BitcoinTrader):
   """Holds Bitcoin until it begins to decline"""
 
-  def __init__(self, db_results, decline_amt):
-    super(HoldUntilDeclineAmt, self).__init__(db_results)
+  def __init__(self, wallet, db_results, decline_amt):
+    super(HoldUntilDeclineAmt, self).__init__(wallet, db_results)
     self.decline_amt = decline_amt
 
   def compute_recommended_action(self):
@@ -83,8 +85,8 @@ class HoldUntilDeclineAmt(BitcoinTrader):
 class HoldUntilDeclinePct(BitcoinTrader):
   """Holds Bitcoin until it begins to decline"""
 
-  def __init__(self, db_results, decline_pct):
-    super(HoldUntilDeclinePct, self).__init__(db_results)
+  def __init__(self, wallet, db_results, decline_pct):
+    super(HoldUntilDeclinePct, self).__init__(wallet, db_results)
     self.decline_pct = decline_pct
 
   def compute_recommended_action(self):
@@ -93,8 +95,8 @@ class HoldUntilDeclinePct(BitcoinTrader):
 class HighLowTrader(BitcoinTrader):
   """Buy low sell high"""
 
-  def __init__(self, db_results, threshold, min_earnings):
-    super(HighLowTrader, self).__init__(db_results)
+  def __init__(self, wallet, db_results, threshold, min_earnings):
+    super(HighLowTrader, self).__init__(wallet, db_results)
     self.threshold = threshold
     self.min_earnings = min_earnings
 
@@ -110,6 +112,7 @@ class HighLowTrader(BitcoinTrader):
       if self.is_at_maximum(self.threshold):
         recommendation = self.ACTION_SELL
         reason = str(self.last_price) + " > " + str(self.max_price - self.threshold * self.get_range())
+    reason = reason + "(" + format_dollars(self.wallet.dollars) + ")"
     return (recommendation, reason) #Fill out this logic based on historical_data
 
 class TraderManager:
