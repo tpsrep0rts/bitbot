@@ -150,23 +150,23 @@ class BitWallet:
     self.conn.commit()
     self.conn.close()
 
-reset_data = True
-starting_funds = 1000.00
-bitcoin_value = 100.00
+#reset_data = True
+#starting_funds = 1000.00
+#bitcoin_value = 100.00
 
-wallet = BitWallet(starting_funds, reset_data)
-wallet.print_status(bitcoin_value)
+#wallet = BitWallet(starting_funds, reset_data)
+#wallet.print_status(bitcoin_value)
 
-wallet.purchase_bitcoin(1.0, bitcoin_value)
-wallet.print_status(bitcoin_value)
+#wallet.purchase_bitcoin(1.0, bitcoin_value)
+#wallet.print_status(bitcoin_value)
 
-bitcoin_value = 200.00
-wallet.purchase_bitcoin(1.0, bitcoin_value)
-wallet.print_status(bitcoin_value)
+#bitcoin_value = 200.00
+#wallet.purchase_bitcoin(1.0, bitcoin_value)
+#wallet.print_status(bitcoin_value)
 
-bitcoin_value = 300.00
-purchase_sale = wallet.sell_bitcoin_by_target_pct(1.0, bitcoin_value)
-print "=============================================================================="
-print "Sold {qty} BTC @ {bitcoin_value} purchased for {purchase_price} for profit of: {profit}: {profit_pct}%".format(profit_pct=((bitcoin_value - purchase_sale.price)*100/purchase_sale.price),bitcoin_value=utils.format_dollars(bitcoin_value), purchase_price=utils.format_dollars(purchase_sale.price), qty = purchase_sale.qty, profit=utils.format_dollars(purchase_sale.profit))
-print "==============================================================================\n"
-wallet.print_status(bitcoin_value)
+#bitcoin_value = 300.00
+#purchase_sale = wallet.sell_bitcoin_by_target_pct(1.0, bitcoin_value)
+#print "=============================================================================="
+#print "Sold {qty} BTC @ {bitcoin_value} purchased for {purchase_price} for profit of: {profit}: {profit_pct}%".format(profit_pct=((bitcoin_value - purchase_sale.price)*100/purchase_sale.price),bitcoin_value=utils.format_dollars(bitcoin_value), purchase_price=utils.format_dollars(purchase_sale.price), qty = purchase_sale.qty, profit=utils.format_dollars(purchase_sale.profit))
+#print "==============================================================================\n"
+#wallet.print_status(bitcoin_value)
