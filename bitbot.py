@@ -4,6 +4,7 @@ import time
 import datetime
 import requests,json
 import utils
+import math
 from bitcoin_trader import *
 from bitconfig import *
 from bit_wallet import *
@@ -79,7 +80,7 @@ class BitBot:
     self.last_price = 0.0
     self.last_time = 0
     current_time = int(time.time())
-    self.db_results = self.query_db(current_time - data_source.query_rate, current_time)
+    self.db_results = self.query_db(current_time - self.SECONDS_PER_HOUR, current_time)
     self.register_traders(self.db_results, starting_cash)
     self.data_source = data_source
     if(self.data_source.should_persist):
@@ -99,9 +100,10 @@ class BitBot:
     query = "INSERT INTO bitcoin_prices (quote_time, price, slope) VALUES ('{quote_time}', '{quote_price}', '{quote_slope}');"\
         .format(quote_time=time, quote_price=price, quote_slope=slope)
     self.c.execute(query)
+    self.conn.commit()
 
   def query_db(self, min_time, max_time):
-    query = self.RECENT_PRICES_QUERY.format(min_quote_time=min_time, max_quote_time=max_time)
+    query = self.RECENT_PRICES_QUERY.format(min_quote_time=int(min_time), max_quote_time=int(max_time))
     self.c.execute(query)
     return self.c.fetchall()
 
@@ -121,8 +123,7 @@ class BitBot:
     self.last_price = 0.0
     self.last_time = 0
     current_time = int(time.time())
-    db_results = self.query_db(current_time - self.data_source.query_rate, current_time)
-    self.print_db_results(db_results)
+    self.print_db_results(self.db_results)
 
   def print_header(self):
     print "Time\t\t\tPrice\tSlope\t\tRecommendation"
