@@ -143,7 +143,10 @@ class BitBot:
       print date_string + "\t" + utils.format_dollars(price)  + "\t" + utils.format_slope(slope) + "\t" + rec_string
 
   def compute_slope(self, price, time):
-    return (price - self.last_price) / (time - self.last_time)
+    slope = 0.0
+    if(time > self.last_time):
+      slope = (price - self.last_price) / (time - self.last_time)
+    return slope
 
   def on_price_change(self, current_price):
     current_time = int(time.time())
@@ -154,13 +157,13 @@ class BitBot:
       recommendations = TraderManager.compute_recommended_actions()
       self.print_price_data(current_price, current_time, slope, recommendations)
       self.last_time = current_time
+      self.last_price = current_price
 
   def on_awake(self):
     try:
       current_price = self.data_source.query()
       if utils.format_dollars(self.last_price) != utils.format_dollars(current_price):
         self.on_price_change(current_price)
-        self.last_price = current_price
     except ValueError:
       print "Error querying Bitstamp API"
     except requests.ConnectionError:
