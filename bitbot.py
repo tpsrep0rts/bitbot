@@ -39,7 +39,7 @@ class LinearDataSource(BitDataSource):
     super(LinearDataSource, self).__init__(False, query_rate)
 
   def query(self):
-    self.last_price += self.growth_rate
+    self.last_price = max(0.0, self.last_price + self.growth_rate)
     return self.last_price
 
 class BounceDataSource(BitDataSource):
@@ -174,8 +174,10 @@ class BitBot:
     self.conn.close()
 
 starting_cash = 1000.00
-#data_source = BitstampDataSource()
-#data_source = LinearDataSource(start_price = 420.00, growth_rate = 1.0, query_rate=1)
-data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=0.1)
-bitbot = BitBot(data_source, starting_cash)
+
+bitstamp_data_source = BitstampDataSource()
+linear_data_source = LinearDataSource(start_price = 420.00, growth_rate = 1.0, query_rate=1)
+bounce_data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=0.1)
+
+bitbot = BitBot(bitstamp_data_source, starting_cash)
 bitbot.monitor()
