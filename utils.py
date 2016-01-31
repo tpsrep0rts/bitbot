@@ -24,7 +24,7 @@ def format_dollars(dollars):
   return "${:.2f}".format(dollars)
 
 def format_slope(slope):
-  return  "{:.6f}".format(slope)
+  return  "{:.3f}".format(slope)
 
 def approximately_zero(value):
   return value > -ZERO and valu

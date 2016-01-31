@@ -1,5 +1,6 @@
 import time
 from utils import *
+from event_manager import *
 
 class BitcoinTrader(object):
   """Base class for Bitcoin trading behaviors"""
@@ -24,11 +25,15 @@ class BitcoinTrader(object):
       timestamp =  item[0]
       self.add_bitcoin_data(price, slope, timestamp)
     self.prune_history()
+    EventManager.add_subscription("price_change", [], self.handle_price_event)
 
   def prune_history(self):
     length = len(self.historical_data)
     if length > self.MAX_HISTORY:
       del self.historical_data[:length - self.MAX_HISTORY]
+
+  def handle_price_event(self, event):
+    self.add_bitcoin_data(event.metadata['price'], event.metadata['slope'], event.metadata['time'])
 
   def add_bitcoin_data(self, price, slope, timestamp = 0):
     if timestamp == 0:
@@ -121,14 +126,6 @@ class TraderManager:
   @staticmethod
   def add_trader(trader):
     TraderManager.traders.append(trader)
-
-  @staticmethod
-  def add_bitcoin_data(price, slope, timestamp = 0):
-    if timestamp == 0:
-      timestamp = int(time.time())
-
-    for trader in TraderManager.traders:
-      trader.add_bitcoin_data(price, slope, timestamp)
 
   @staticmethod
   def compute_recommended_actions():

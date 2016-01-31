@@ -1,13 +1,16 @@
 
 class Event(object):
-  def __init__(self, code, params = []):
+  def __init__(self, code, params = [], metadata = {}):
     self.code = code
     self.params = params
+    self.metadata = metadata
 
   def __str__(self):
     string = self.code
     if self.params:
       string += ", " + ", ".join(self.params)
+    if self.metadata:
+      string += ", [" + str(self.metadata) + "]"
     return string
 
 class EventSubscription(object):
@@ -40,11 +43,9 @@ class EventManager(object):
     EventManager.subscriptions[code].append(EventSubscription(Event(code, params), callback))
 
   @staticmethod
-  def notify(code, params):
-    event = Event(code, params)
-    print "sending event: " + str(event)
-    if(code in EventManager.subscriptions):
-      for subscriber in EventManager.subscriptions[code]:
+  def notify(event):
+    if(event.code in EventManager.subscriptions):
+      for subscriber in EventManager.subscriptions[event.code]:
         subscriber.notify(event)
 
 
@@ -57,4 +58,5 @@ class EventManager(object):
 #
 #subscriber = TestSubscriber()
 #subscriber.register_callbacks()
+#    EventManager.add_subscription("test", ["one"], self.test_callback)
 #EventManager.notify("test", ["one", "two"])
