@@ -63,33 +63,42 @@ class BitBot:
     trade_threshold = self.config.getfloat("Trader", "priceequivalencythreshold")
     TraderManager.add_trader(HighLowTrader(db_results, trade_threshold, min_earnings))
 
-  def monitor(self):
+  def init_monitor(self):
     self.last_price = 0.0
     self.last_time = 0
-
-    print "Time\t\t\tPrice\tSlope\t\tRecommendation"
     current_time = int(time.time())
     db_results = self.query_db(current_time - self.QUERY_INTERVAL, current_time)
     self.print_db_results(db_results)
-    self.register_traders(db_results)
+
+  def print_header(self):
+    print "Time\t\t\tPrice\tSlope\t\tRecommendation"
+
+  def monitor(self):
+    self.print_header()
+    self.init_monitor()
 
     while True:
       self.on_awake()
       time.sleep(self.REFRESH_INTERVAL)
 
+  def print_price_data(self, price, time, slope, recommendations):
+    date_string = datetime.datetime.fromtimestamp(time).strftime('%Y-%m-%d %H:%M:%S')
+    rec_string = ""
+    for rec in recommendations:
+      rec_string = rec_string + ", (" + rec[0] + "," + rec[1] + ")"
+      print date_string + "\t" + utils.format_dollars(price)  + "\t" + utils.format_slope(slope) + "\t" + rec_string
+
+  def compute_slope(self, price, time):
+    return (current_price - self.last_price) / (current_time - self.last_time)
+
   def on_price_change(self, current_price):
     current_time = int(time.time())
     if self.last_time != current_time:
-      slope = (current_price - self.last_price) / (current_time - self.last_time)
+      slope = self.compute_slope(current_price, current_time)
       self.insert(current_price, current_time, slope)
       TraderManager.add_bitcoin_data(current_price, slope, current_time)
       recommendations = TraderManager.compute_recommended_actions()
-
-      date_string = datetime.datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
-      rec_string = ""
-      for rec in recommendations:
-        rec_string = rec_string + ", (" + rec[0] + "," + rec[1] + ")"
-      print date_string + "\t" + utils.format_dollars(current_price)  + "\t" + utils.format_slope(slope) + "\t" + rec_string
+      self.print_price_data(slope, current_time, current_price, recommendations)
       self.last_time = current_time
 
 
