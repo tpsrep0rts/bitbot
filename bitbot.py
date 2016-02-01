@@ -180,5 +180,5 @@ bitstamp_data_source = BitstampDataSource()
 linear_data_source = LinearDataSource(start_price = 420.00, growth_rate = 1.0, query_rate=1)
 bounce_data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=0.1)
 
-bitbot = BitBot(bounce_data_source, starting_cash)
+bitbot = BitBot(bitstamp_data_source, starting_cash)
 bitbot.monitor()
