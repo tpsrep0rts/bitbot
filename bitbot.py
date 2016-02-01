@@ -63,6 +63,48 @@ class BounceDataSource(BitDataSource):
       self.current_growth_rate *= -1
     return self.last_price
 
+class DB(object):
+  BITCOIN_DB = 'bitcoin.sqlite'
+
+  conn = None
+  c = None
+  initialized = False
+
+  @staticmethod
+  def require_initialized():
+    if(not DB.initialized):
+      DB.initialized = True
+      DB.init()
+
+  @staticmethod
+  def init():
+    DB.conn = utils.connect_to_database(DB.BITCOIN_DB)
+    DB.c = DB.conn.cursor()
+
+  @staticmethod
+  def query(query):
+    DB.require_initialized()
+    DB.c.execute(query)
+    return DB.c.fetchall()
+
+  @staticmethod
+  def execute(query):
+    DB.require_initialized()
+    DB.c.execute(query)
+    DB.conn.commit()
+
+  @staticmethod
+  def insert(query):
+    DB.require_initialized()
+    DB.c.execute(query)
+    DB.conn.commit()
+
+  @staticmethod
+  def insert(query):
+    DB.require_initialized()
+    DB.execute(query)
+    #return insert id
+
 class BitBot:
   """Bitcoin trading bot"""
   SECONDS_PER_MINUTE = 60
@@ -71,25 +113,23 @@ class BitBot:
   CREATE_TABLE_QUERY = "CREATE TABLE bitcoin_prices(id INTEGER PRIMARY KEY AUTOINCREMENT, quote_time INTEGER, price FLOAT, slope FLOAT DEFAULT 0);"
   RECENT_PRICES_QUERY = 'SELECT quote_time, price, slope FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time} ORDER BY quote_time ASC'
 
-
-  def __init__(self, data_source, starting_cash):
-    self.conn = utils.connect_to_database('bitcoin.sqlite')
-    self.c = self.conn.cursor()
-    self.config = BitConfig()
-
+  def __init__(self, wallet, data_source, trader):
     self.last_price = 0.0
     self.last_time = 0
+    self.trader = trader
+
+    self.wallet = wallet
     current_time = int(time.time())
-    self.db_results = []#self.query_db(current_time - self.SECONDS_PER_HOUR, current_time)
-    self.register_traders(self.db_results, starting_cash)
+    query = self.RECENT_PRICES_QUERY.format(min_quote_time=int(current_time - self.SECONDS_PER_HOUR), max_quote_time=int(current_time))
+    self.db_results = DB.query(query)
     self.data_source = data_source
     if(self.data_source.should_persist):
       EventManager.add_subscription("price_change", [], self.handle_price_event)
 
   def initialize_db(self):
     try:
-      self.c.execute(self.DROP_TABLE_QUERY)
-      self.c.execute(self.CREATE_TABLE_QUERY)
+      DB.execute(self.DROP_TABLE_QUERY)
+      DB.execute(self.CREATE_TABLE_QUERY)
     except sqlite3.OperationalError as e:
       print "sqlite3 error: " + str(e)
 
@@ -99,25 +139,13 @@ class BitBot:
   def insert(self, price, time, slope):
     query = "INSERT INTO bitcoin_prices (quote_time, price, slope) VALUES ('{quote_time}', '{quote_price}', '{quote_slope}');"\
         .format(quote_time=time, quote_price=price, quote_slope=slope)
-    self.c.execute(query)
-    self.conn.commit()
-
-  def query_db(self, min_time, max_time):
-    query = self.RECENT_PRICES_QUERY.format(min_quote_time=int(min_time), max_quote_time=int(max_time))
-    self.c.execute(query)
-    return self.c.fetchall()
+    DB.execute(query)
 
   def print_db_results(self, db_results):
     for row in db_results:
       date_string = datetime.datetime.fromtimestamp(row[0]).strftime('%Y-%m-%d %H:%M:%S')
       self.last_price = row[1]
       print date_string + "\t" + utils.format_dollars(self.last_price) + "\t" + utils.format_slope(row[2])
-
-  def register_traders(self, db_results, starting_cash):
-    min_earnings = self.config.getfloat("Trader", "minearningspershare")
-    trade_threshold = self.config.getfloat("Trader", "priceequivalencythreshold")
-    wallet = BitWallet(starting_cash)
-    TraderManager.add_trader(HighLowTrader(wallet, db_results, trade_threshold, min_earnings))
 
   def init_monitor(self):
     self.last_price = 0.0
@@ -155,8 +183,8 @@ class BitBot:
       slope = self.compute_slope(current_price, current_time)
       EventManager.notify(Event("price_change", [], {'price':current_price, 'time': current_time, 'slope': slope }))
 
-      recommendations = TraderManager.compute_recommended_actions()
-      self.print_price_data(current_price, current_time, slope, recommendations)
+      recommendation = self.trader.compute_recommended_action()
+      self.print_price_data(current_price, current_time, slope, [recommendation])
       self.last_time = current_time
       self.last_price = current_price
 
@@ -171,14 +199,24 @@ class BitBot:
       print "Error querying Bitstamp API"
 
   def __del__(self):
-    self.conn.commit()
-    self.conn.close()
+    DB.conn.commit()
+    DB.conn.close()
 
+#INPUTS
 starting_cash = 1000.00
+wallet = BitWallet(starting_cash)
+config = BitConfig()
 
+# DATA SOURCES
 bitstamp_data_source = BitstampDataSource()
 linear_data_source = LinearDataSource(start_price = 420.00, growth_rate = 1.0, query_rate=1)
 bounce_data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=0.1)
 
-bitbot = BitBot(bitstamp_data_source, starting_cash)
+#TRADERS
+min_earnings = config.getfloat("Trader", "minearningspershare")
+trade_threshold = config.getfloat("Trader", "priceequivalencythreshold")
+high_low_trader = HighLowTrader(wallet, [], trade_threshold, min_earnings)
+
+#INITIALIZE
+bitbot = BitBot(wallet, bitstamp_data_source, high_low_trader)
 bitbot.monitor()
