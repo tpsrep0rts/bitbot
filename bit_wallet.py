@@ -70,11 +70,17 @@ class BitWallet:
     for index, db_row in enumerate(db_rows):
       self.add_db_record(BitWalletRecord.create(db_row, index))
 
-  def get_account_value(self, current_bitcoin_price):
-    value = self.dollars
+  def get_bitcoin_qty(self):
+    qty = 0.0
     for index, record in self.bitcoin_records.items():
-      value += record.qty * current_bitcoin_price
-    return value
+      qty += record.qty
+    return qty
+
+  def get_bitcoin_value(self, current_bitcoin_price):
+    return self.get_bitcoin_qty() * current_bitcoin_price
+
+  def get_account_value(self, current_bitcoin_price):
+    return self.dollars + self.get_bitcoin_value(current_bitcoin_price)
 
   def print_status(self, current_bitcoin_price):
     print "=============================================================================="
@@ -87,9 +93,6 @@ class BitWallet:
     for index, record in self.bitcoin_records.items():
       print record
     print "==============================================================================\n"
-
-  def add_dollars(self, dollars):
-    self.dollars += dollars
 
   def add_dollars(self, dollars):
     self.dollars += dollars

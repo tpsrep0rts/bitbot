@@ -80,7 +80,7 @@ class BitBot:
     self.last_price = 0.0
     self.last_time = 0
     current_time = int(time.time())
-    self.db_results = self.query_db(current_time - self.SECONDS_PER_HOUR, current_time)
+    self.db_results = []#self.query_db(current_time - self.SECONDS_PER_HOUR, current_time)
     self.register_traders(self.db_results, starting_cash)
     self.data_source = data_source
     if(self.data_source.should_persist):
@@ -180,5 +180,5 @@ bitstamp_data_source = BitstampDataSource()
 linear_data_source = LinearDataSource(start_price = 420.00, growth_rate = 1.0, query_rate=1)
 bounce_data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=0.1)
 
-bitbot = BitBot(bitstamp_data_source, starting_cash)
+bitbot = BitBot(bounce_data_source, starting_cash)
 bitbot.monitor()

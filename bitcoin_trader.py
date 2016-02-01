@@ -16,6 +16,7 @@ class BitcoinTrader(object):
     self.max_price = 0.0
     self.min_price = 999999999.0
     self.wallet = wallet
+    self.target_profit_margin = 0.10
 
     self.historical_data = []
 
@@ -25,6 +26,7 @@ class BitcoinTrader(object):
       timestamp =  item[0]
       self.add_bitcoin_data(price, slope, timestamp)
     self.prune_history()
+    print "subscribing to price event"
     EventManager.add_subscription("price_change", [], self.handle_price_event)
 
   def prune_history(self):
@@ -32,8 +34,23 @@ class BitcoinTrader(object):
     if length > self.MAX_HISTORY:
       del self.historical_data[:length - self.MAX_HISTORY]
 
+  def handle_buy_recommendation(self, event):
+    investment_rate = 0.5
+    investable_cash = self.wallet.dollars * investment_rate
+    bitcoin_qty = investable_cash / event.metadata['price']
+    self.wallet.purchase_bitcoin(bitcoin_qty, event.metadata['price'])
+    
+  def handle_sell_recommendation(self, event):
+    self.wallet.sell_bitcoin_by_target_pct(self.target_profit_margin, event.metadata['price'])
+
   def handle_price_event(self, event):
     self.add_bitcoin_data(event.metadata['price'], event.metadata['slope'], event.metadata['time'])
+    recommendation = self.compute_recommended_action()
+    actions = { self.ACTION_BUY : self.handle_buy_recommendation,
+                self.ACTION_SELL : self.handle_sell_recommendation }
+
+    if(recommendation[0] in actions):
+      actions[recommendation[0]](event)
 
   def add_bitcoin_data(self, price, slope, timestamp = 0):
     if timestamp == 0:
@@ -117,7 +134,7 @@ class HighLowTrader(BitcoinTrader):
       if self.is_at_maximum(self.threshold):
         recommendation = self.ACTION_SELL
         reason = str(self.last_price) + " > " + str(self.max_price - self.threshold * self.get_range())
-    reason = reason + "(" + format_dollars(self.wallet.dollars) + ")"
+    reason = reason + "(" + format_dollars(self.wallet.dollars) + ", " + format_dollars(self.wallet.get_bitcoin_value(self.last_price)) + ")"
     return (recommendation, reason) #Fill out this logic based on historical_data
 
 class TraderManager:
