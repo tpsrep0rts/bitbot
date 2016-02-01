@@ -79,9 +79,12 @@ class BitBot:
   def print_price_data(self, price, time, slope, recommendations):
     date_string = datetime.datetime.fromtimestamp(time).strftime('%Y-%m-%d %H:%M:%S')
     rec_string = ""
-    for rec in recommendations:
-      rec_string = rec_string + ", (" + rec[0] + "," + rec[1] + ")"
-      print date_string + "\t" + utils.format_dollars(price)  + "\t" + utils.format_slope(slope) + "\t" + rec_string
+    try:
+      for rec in recommendations:
+        rec_string = rec_string + ", (" + rec[0] + "," + rec[1] + ")"
+        print date_string + "\t" + utils.format_dollars(price)  + "\t" + utils.format_slope(slope) + "\t" + rec_string
+    except ValueError:
+      print ValueError
 
   def compute_slope(self, price, time):
     slope = 0.0
@@ -98,7 +101,7 @@ class BitBot:
       recommendation = self.trader.compute_recommended_action()
       self.print_price_data(current_price, current_time, slope, [recommendation])
       self.last_time = current_time
-      self.last_price = current_price
+      self.last_price = current_price      
 
   def on_awake(self):
     try:
@@ -128,8 +131,10 @@ bounce_data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, m
 #TRADERS
 min_earnings = config.getfloat("Trader", "minearningspershare")
 trade_threshold = config.getfloat("Trader", "priceequivalencythreshold")
+trend_threshold = config.getfloat("Trader", "trendthreshold")
 high_low_trader = HighLowTrader(wallet, [], trade_threshold, min_earnings)
+stop_loss_trader = StopLossTrader(wallet, [], trade_threshold, trend_threshold)
 
 #INITIALIZE
-bitbot = BitBot(wallet, bitstamp_data_source, high_low_trader)
+bitbot = BitBot(wallet, bitstamp_data_source, stop_loss_trader)
 bitbot.monitor()
