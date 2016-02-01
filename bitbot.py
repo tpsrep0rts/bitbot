@@ -69,9 +69,12 @@ class BitBot:
     self.print_header()
     self.init_monitor()
 
-    while True:
-      self.on_awake()
-      time.sleep(self.data_source.query_rate)
+    try:
+      while True:
+        self.on_awake()
+        time.sleep(self.data_source.query_rate)
+    except KeyboardInterrupt:
+      print "Closing"
 
   def print_price_data(self, price, time, slope, recommendations):
     date_string = datetime.datetime.fromtimestamp(time).strftime('%Y-%m-%d %H:%M:%S')
@@ -100,12 +103,12 @@ class BitBot:
   def on_awake(self):
     try:
       current_price = self.data_source.query()
-      if utils.format_dollars(self.last_price) != utils.format_dollars(current_price):
-        self.on_price_change(current_price)
     except ValueError:
       print "Error querying Bitstamp API"
     except requests.ConnectionError:
       print "Error querying Bitstamp API"
+    if utils.format_dollars(self.last_price) != utils.format_dollars(current_price):
+      self.on_price_change(current_price)
 
   def __del__(self):
     for db in DB.conn:

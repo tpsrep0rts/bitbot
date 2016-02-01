@@ -26,7 +26,6 @@ class BitcoinTrader(object):
       timestamp =  item[0]
       self.add_bitcoin_data(price, slope, timestamp)
     self.prune_history()
-    print "subscribing to price event"
     EventManager.add_subscription("price_change", [], self.handle_price_event)
 
   def prune_history(self):
@@ -134,7 +133,7 @@ class HighLowTrader(BitcoinTrader):
       if self.is_at_maximum(self.threshold):
         recommendation = self.ACTION_SELL
         reason = str(self.last_price) + " > " + str(self.max_price - self.threshold * self.get_range())
-    reason = reason + "(" + format_dollars(self.wallet.dollars) + ", " + format_dollars(self.wallet.get_bitcoin_value(self.last_price)) + ")"
+    reason = reason + "(dollars: " + format_dollars(self.wallet.dollars) + ", bitcoin value: " + format_dollars(self.wallet.get_bitcoin_value(self.last_price)) +  ", bitcoin qty: " + format_btc(self.wallet.get_bitcoin_qty()) + ")"
     return (recommendation, reason) #Fill out this logic based on historical_data
 
 class TraderManager:

@@ -23,6 +23,9 @@ def close_database(conn):
 def format_dollars(dollars):
   return "${:.2f}".format(dollars)
 
+def format_btc(btc):
+  return  "{:.5f}".format(btc)
+
 def format_slope(slope):
   return  "{:.5f}".format(slope)
 
