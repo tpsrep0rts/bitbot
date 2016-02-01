@@ -8,102 +8,11 @@ import math
 from bitcoin_trader import *
 from bitconfig import *
 from bit_wallet import *
+from bit_data_sources import *
+from db import *
 from event_manager import *
 import warnings
 import random
-
-class BitDataSource(object):
-  def __init__(self, should_persist=False, query_rate=1.0):
-    self.should_persist = should_persist
-    self.query_rate = query_rate
-
-  def query(self):
-    return 0.0
-
-class BitstampDataSource(BitDataSource):
-  BITSTAMP_URL = 'http://www.bitstamp.net/api/ticker/'
-
-  def __init__(self):
-    super(BitstampDataSource, self).__init__(True, 5.0)
-
-  def query(self):
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      r = requests.get(self.BITSTAMP_URL)
-    priceFloat = float(json.loads(r.text)['last'])
-    return priceFloat
-
-class LinearDataSource(BitDataSource):
-  def __init__(self, start_price = 420.00, growth_rate = 1.0, query_rate=1.0):
-    self.last_price = start_price
-    self.growth_rate = growth_rate
-    super(LinearDataSource, self).__init__(False, query_rate)
-
-  def query(self):
-    self.last_price = max(0.0, self.last_price + self.growth_rate)
-    return self.last_price
-
-class BounceDataSource(BitDataSource):
-  def __init__(self, start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=1.0):
-    self.last_price = start_price
-    self.growth_rate = growth_rate
-    self.min_price = min_price
-    self.max_price = max_price
-
-    self.current_growth_rate = growth_rate
-    super(BounceDataSource, self).__init__(False, query_rate)
-
-  def query(self):
-    self.last_price += self.current_growth_rate
-    if(self.last_price > self.max_price):
-      self.last_price = self.max_price
-      self.current_growth_rate *= -1
-    elif(self.last_price < self.min_price):
-      self.last_price = self.min_price
-      self.current_growth_rate *= -1
-    return self.last_price
-
-class DB(object):
-  BITCOIN_DB = 'bitcoin.sqlite'
-
-  conn = None
-  c = None
-  initialized = False
-
-  @staticmethod
-  def require_initialized():
-    if(not DB.initialized):
-      DB.initialized = True
-      DB.init()
-
-  @staticmethod
-  def init():
-    DB.conn = utils.connect_to_database(DB.BITCOIN_DB)
-    DB.c = DB.conn.cursor()
-
-  @staticmethod
-  def query(query):
-    DB.require_initialized()
-    DB.c.execute(query)
-    return DB.c.fetchall()
-
-  @staticmethod
-  def execute(query):
-    DB.require_initialized()
-    DB.c.execute(query)
-    DB.conn.commit()
-
-  @staticmethod
-  def insert(query):
-    DB.require_initialized()
-    DB.c.execute(query)
-    DB.conn.commit()
-
-  @staticmethod
-  def insert(query):
-    DB.require_initialized()
-    DB.execute(query)
-    #return insert id
 
 class BitBot:
   """Bitcoin trading bot"""
@@ -121,15 +30,15 @@ class BitBot:
     self.wallet = wallet
     current_time = int(time.time())
     query = self.RECENT_PRICES_QUERY.format(min_quote_time=int(current_time - self.SECONDS_PER_HOUR), max_quote_time=int(current_time))
-    self.db_results = DB.query(query)
+    self.db_results = DB.query(DB.BITCOIN_DB, query)
     self.data_source = data_source
     if(self.data_source.should_persist):
       EventManager.add_subscription("price_change", [], self.handle_price_event)
 
   def initialize_db(self):
     try:
-      DB.execute(self.DROP_TABLE_QUERY)
-      DB.execute(self.CREATE_TABLE_QUERY)
+      DB.execute(DB.BITCOIN_DB, self.DROP_TABLE_QUERY)
+      DB.execute(DB.BITCOIN_DB, self.CREATE_TABLE_QUERY)
     except sqlite3.OperationalError as e:
       print "sqlite3 error: " + str(e)
 
@@ -139,7 +48,7 @@ class BitBot:
   def insert(self, price, time, slope):
     query = "INSERT INTO bitcoin_prices (quote_time, price, slope) VALUES ('{quote_time}', '{quote_price}', '{quote_slope}');"\
         .format(quote_time=time, quote_price=price, quote_slope=slope)
-    DB.execute(query)
+    DB.execute(DB.BITCOIN_DB, query)
 
   def print_db_results(self, db_results):
     for row in db_results:
@@ -199,8 +108,9 @@ class BitBot:
       print "Error querying Bitstamp API"
 
   def __del__(self):
-    DB.conn.commit()
-    DB.conn.close()
+    for db in DB.conn:
+      DB.conn[db].commit()
+      DB.conn[db].close()
 
 #INPUTS
 starting_cash = 1000.00
