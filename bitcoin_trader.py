@@ -1,4 +1,5 @@
 import time
+import utils
 from utils import *
 from event_manager import *
 
@@ -19,6 +20,7 @@ class BitcoinTrader(object):
     self.min_price = 999999999.0
     self.wallet = wallet
     self.target_profit_margin = 0.10
+    self.buy_made = False
 
     self.historical_data = []
 
@@ -30,7 +32,7 @@ class BitcoinTrader(object):
     self.prune_history()
     EventManager.add_subscription("price_change", [], self.handle_price_event)
     EventManager.add_subscription("price_change", [], self.trend_watcher)
-    """Is this the right way to do this? Or append to previous subscription?"""
+    # Is this the right way to do this? Or append to previous subscription?
 
   def prune_history(self):
     length = len(self.historical_data)
@@ -81,11 +83,11 @@ class BitcoinTrader(object):
     return self.last_price > self.max_price - self.get_range() * threshold
 
   def trend_watcher(self, event):
-    if ((event.metadata['slope'] < 0) & (self.trend_slope < 0.0)) or ((event.metadata['slope'] > 0) & (self.trend_slope > 0.0)):
+    if ((event.metadata['slope'] < 0.0) & (self.trend_slope < 0.0)) or ((event.metadata['slope'] > 0.0) & (self.trend_slope > 0.0)):
       self.trend_count += 1
-    else:
-      self.trend_slope = event.metadata['slope']      
+    else:           
       self.trend_count = 0
+    self.trend_slope = event.metadata['slope'] 
 
   def compute_recommended_action(self):
     return self.ACTION_HOLD
@@ -152,27 +154,33 @@ class HighLowTrader(BitcoinTrader):
 class StopLossTrader(BitcoinTrader):
   """Buy when stable, sell when market dips"""
 
-  def __init__(self, wallet, db_results, threshold, trend_threshold):
-    super(StopLossTrader, self).__init__(wallet, db_results)
+  def __init__(self, wallet, db_results, threshold, trend_count_threshold, trend_slope_minimum):
+    super(StopLossTrader, self).__init__(wallet, db_results)    
     self.threshold = threshold
-    self.trend_threshold = trend_threshold
-    
+    self.trend_count_threshold = trend_count_threshold
+    self.trend_slope_minimum = trend_slope_minimum
 
-  def compute_recommended_action(self):
+  def compute_recommended_action(self):    
+    stable = False
     recommendation = self.ACTION_HOLD
     reason = "no action"
     new_reason = "Last Price: " + str(self.last_price) + ", Daily Minimum: " + str(self.min_price) + ", Daily Maximum: " + str(self.max_price) + ", Range: " + str(self.get_range()) + ", Threshold: " + str(self.threshold) + ", Min Threshold: " + str(self.min_price + self.threshold * self.get_range()) + ", Max Threshold: " + str(self.max_price - self.threshold * self.get_range())
-
-  def is_stable(self):
-    return (self.trend_count > self.trend_threshold) & (self.trend_slope > 0.0)
     
-    if (is_stable):
-      recommendation = self.ACTION_BUY
-      reason = str(self.trend_slope)  + ", " + str(self.trend_count) + " > " + str(self.trend_threshold)
-    elif ((self.trend_slope < 0.0) & false(is_at_minimum)):
+    #is_stable
+    if (self.trend_count > self.trend_count_threshold) & (self.trend_slope > self.trend_slope_minimum):        
+        stable = True
+
+
+    if (stable == True):
+      if (self.buy_made == False):
+        recommendation = self.ACTION_BUY
+        reason = str(self.trend_slope)  + " > " + str(self.trend_slope_minimum) + str(self.trend_count) + " > " + str(self.trend_count_threshold)
+        self.buy_made = True
+    elif ((self.last_slope < -0.001) & self.is_at_minimum(self.threshold) == True):
       recommendation = self.ACTION_SELL
-      reason = str(self.trend_slope)  + ", " + str(is_at_minimum)
-    reason = reason + "(" + format_dollars(self.wallet.dollars) + ", " + format_dollars(self.wallet.get_bitcoin_value(self.last_price)) + ")"
+      reason = "slope: " + str(utils.format_slope(self.last_slope))  + ", @ minimum threshold: " + str(self.is_at_minimum(self.threshold)) + ", "
+      self.buy_made = False
+    reason = reason + ", Stable: " + str(stable) + ", Trend Count: " + str(self.trend_count) + " (dollars: " + format_dollars(self.wallet.dollars) + ", bitcoin value: " + format_dollars(self.wallet.get_bitcoin_value(self.last_price)) +  ", bitcoin qty: " + format_btc(self.wallet.get_bitcoin_qty()) + ")"
     return (recommendation, reason) #Fill out this logic based on historical_data
 
 class TraderManager:
