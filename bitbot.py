@@ -84,7 +84,7 @@ class BitBot:
         rec_string = rec_string + ", (" + rec[0] + "," + rec[1] + ")"
         print date_string + "\t" + utils.format_dollars(price)  + "\t" + utils.format_slope(slope) + "\t" + rec_string
     except ValueError:
-      print ValueError
+      return ValueError
 
   def compute_slope(self, price, time):
     slope = 0.0
@@ -131,10 +131,11 @@ bounce_data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, m
 #TRADERS
 min_earnings = config.getfloat("Trader", "minearningspershare")
 trade_threshold = config.getfloat("Trader", "priceequivalencythreshold")
-trend_threshold = config.getfloat("Trader", "trendthreshold")
+trend_count_threshold = config.getint("Trader", "trendcountthreshold")
+trend_slope_minimum = config.getfloat("Trader", "trendslopeminimum")
 high_low_trader = HighLowTrader(wallet, [], trade_threshold, min_earnings)
-stop_loss_trader = StopLossTrader(wallet, [], trade_threshold, trend_threshold)
+stop_loss_trader = StopLossTrader(wallet, [], trade_threshold, trend_count_threshold, trend_slope_minimum)
 
 #INITIALIZE
-bitbot = BitBot(wallet, bitstamp_data_source, stop_loss_trader)
+bitbot = BitBot(wallet, bounce_data_source, stop_loss_trader)
 bitbot.monitor()
