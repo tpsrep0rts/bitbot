@@ -132,6 +132,7 @@ config = BitConfig()
 bitstamp_data_source = BitstampDataSource()
 linear_data_source = LinearDataSource(start_price = 420.00, growth_rate = 1.0, query_rate=1)
 bounce_data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=0.1)
+random_bounce_data_source = RandomBounceDataSource(random_threshold = 0.001, start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=0.1)
 
 #TRADERS
 min_earnings = config.getfloat("Trader", "minearningspershare")
@@ -142,5 +143,5 @@ high_low_trader = HighLowTrader(wallet, [], trade_threshold, min_earnings)
 stop_loss_trader = StopLossTrader(wallet, [], trade_threshold, trend_count_threshold)
 
 #INITIALIZE
-bitbot = BitBot(wallet, bounce_data_source, stop_loss_trader)
+bitbot = BitBot(wallet, random_bounce_data_source, stop_loss_trader)
 bitbot.monitor()

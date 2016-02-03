@@ -1,5 +1,5 @@
 
-import warnings
+import warnings, random
 import requests,json
 
 class BitDataSource(object):
@@ -52,3 +52,14 @@ class BounceDataSource(BitDataSource):
       self.last_price = self.min_price
       self.current_growth_rate *= -1
     return self.last_price
+
+
+class RandomBounceDataSource(BounceDataSource):
+  def __init__(self, random_threshold = 0.2, start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=1.0):
+    self.random_threshold = random_threshold
+    super(RandomBounceDataSource, self).__init__(start_price, min_price, max_price, growth_rate, query_rate)
+
+  def query(self):
+    if(random.random() < self.random_threshold):
+      self.current_growth_rate *= -1
+    return super(RandomBounceDataSource, self).query()
