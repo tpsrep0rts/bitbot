@@ -2,7 +2,7 @@ import time
 import utils
 from utils import *
 from event_manager import *
-import traceback
+
 class BitcoinTrader(object):
   """Base class for Bitcoin trading behaviors"""
   ACTION_BUY = "buy"
@@ -23,7 +23,7 @@ class BitcoinTrader(object):
     self.max_price = 0.0
     self.min_price = 999999999.0
     self.wallet = wallet
-    self.target_profit_margin = 0.10
+    self.target_profit_margin = 0.03
 
     self.historical_data = []
 
@@ -176,11 +176,11 @@ class StopLossTrader(BitcoinTrader):
     self.trend_count_threshold = trend_count_threshold
     self.next_recommendation = self.ACTION_HOLD
     self.has_purchased_this_trend = False
+    self.has_sold_this_trend = False
 
   def handle_trend_disruption(self, new_trend):
     self.has_purchased_this_trend = False
-    if(new_trend == self.TREND_DECREASING and self.is_trend_stable()):
-      self.next_recommendation = self.ACTION_SELL
+    self.has_sold_this_trend = False
 
   def is_trend_stable(self):
     return (self.trend_count > self.trend_count_threshold)
@@ -189,14 +189,15 @@ class StopLossTrader(BitcoinTrader):
     recommendation = self.ACTION_HOLD
     reason = "no action"
     new_reason = "Last Price: " + str(self.last_price) + ", Daily Minimum: " + str(self.min_price) + ", Daily Maximum: " + str(self.max_price) + ", Range: " + str(self.get_range()) + ", Threshold: " + str(self.threshold) + ", Min Threshold: " + str(self.min_price + self.threshold * self.get_range()) + ", Max Threshold: " + str(self.max_price - self.threshold * self.get_range())
-    stable = self.is_trend_stable()
-    if(self.next_recommendation == self.ACTION_SELL):
-      reason = "stop loss"
-      recommendation = self.ACTION_SELL
-      self.next_recommendation = self.ACTION_HOLD
-    elif(self.trend_count >= self.trend_count_threshold and self.trend == self.TREND_INCREASING and not self.has_purchased_this_trend):
-      reason = "base buy"
-      recommendation = self.ACTION_BUY
-      self.has_purchased_this_trend = True
-    reason = reason + ", Stable: " + str(stable) + ", Trend: " + str(self.trend) + ", Trend Count: " + str(self.trend_count) + " (dollars: " + format_dollars(self.wallet.dollars) + ", bitcoin value: " + format_dollars(self.wallet.get_bitcoin_value(self.last_price)) +  ", bitcoin qty: " + format_btc(self.wallet.get_bitcoin_qty()) + ")"
+    is_stable = self.is_trend_stable()
+    if(is_stable):
+      if(self.trend == self.TREND_DECREASING and not self.has_sold_this_trend):
+        reason = "stop loss"
+        recommendation = self.ACTION_SELL
+        self.has_sold_this_trend = True
+      elif(self.trend == self.TREND_INCREASING and not self.has_purchased_this_trend):
+        reason = "base buy"
+        recommendation = self.ACTION_BUY
+        self.has_purchased_this_trend = True
+    reason = reason + ", Stable: " + str(is_stable) + ", Trend: " + str(self.trend) + ", Trend Count: " + str(self.trend_count) + " (dollars: " + format_dollars(self.wallet.dollars) + ", bitcoin value: " + format_dollars(self.wallet.get_bitcoin_value(self.last_price)) +  ", bitcoin qty: " + format_btc(self.wallet.get_bitcoin_qty()) + ")"
     return (recommendation, reason) #Fill out this logic based on historical_data 
