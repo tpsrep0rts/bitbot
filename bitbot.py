@@ -26,12 +26,14 @@ class BitBot:
     self.last_price = 0.0
     self.last_time = 0
     self.trader = trader
+    self.trader.register_listeners()
 
     self.wallet = wallet
     current_time = int(time.time())
     query = self.RECENT_PRICES_QUERY.format(min_quote_time=int(current_time - self.SECONDS_PER_HOUR), max_quote_time=int(current_time))
     self.db_results = DB.query(DB.BITCOIN_DB, query)
     self.data_source = data_source
+
     if(self.data_source.should_persist):
       EventManager.add_subscription("price_change", [], self.handle_price_event)
 
@@ -96,9 +98,9 @@ class BitBot:
     current_time = int(time.time())
     if self.last_time != current_time:
       slope = self.compute_slope(current_price, current_time)
-      EventManager.notify(Event("price_change", [], {'price':current_price, 'time': current_time, 'slope': slope }))
-
       recommendation = self.trader.compute_recommended_action()
+      EventManager.notify(Event("price_change", [recommendation[0]], {'price':current_price, 'time': current_time, 'slope': slope }))
+
       self.print_price_data(current_price, current_time, slope, [recommendation])
       self.last_time = current_time
       self.last_price = current_price      
@@ -118,6 +120,9 @@ class BitBot:
       DB.conn[db].commit()
       DB.conn[db].close()
 
+
+DB.query(DB.WALLET_DB, "DELETE FROM investments")
+
 #INPUTS
 starting_cash = 1000.00
 wallet = BitWallet(starting_cash)
@@ -132,9 +137,9 @@ bounce_data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, m
 min_earnings = config.getfloat("Trader", "minearningspershare")
 trade_threshold = config.getfloat("Trader", "priceequivalencythreshold")
 trend_count_threshold = config.getint("Trader", "trendcountthreshold")
-trend_slope_minimum = config.getfloat("Trader", "trendslopeminimum")
+
 high_low_trader = HighLowTrader(wallet, [], trade_threshold, min_earnings)
-stop_loss_trader = StopLossTrader(wallet, [], trade_threshold, trend_count_threshold, trend_slope_minimum)
+stop_loss_trader = StopLossTrader(wallet, [], trade_threshold, trend_count_threshold)
 
 #INITIALIZE
 bitbot = BitBot(wallet, bounce_data_source, stop_loss_trader)
