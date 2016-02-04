@@ -3,6 +3,20 @@ import utils
 from utils import *
 from event_manager import *
 
+class BitRecommendation(object):
+  def __init__(self, recommendation, reason=None, data = {}):
+    self.recommendation = recommendation
+    self.reason = reason
+    self.data = data
+
+  def __str__(self):
+    result = [
+      self.recommendation,
+      self.reason,
+      str(self.data)
+    ]
+    return ", ".join(result)
+
 class BitcoinTrader(object):
   """Base class for Bitcoin trading behaviors"""
   ACTION_BUY = "buy"
@@ -106,23 +120,23 @@ class BitcoinTrader(object):
     self.last_slope = event.metadata['slope'] 
 
   def compute_recommended_action(self):
-    return self.ACTION_HOLD
+    return BitRecommendation(self.ACTION_HOLD)
 
 class BullTrader(BitcoinTrader):
   """Recommends buying Bitcoin for USD"""
   def compute_recommended_action(self):
     
-    return self.ACTION_BUY
+    return BitRecommendation(self.ACTION_BUY)
 
 class BearTrader(BitcoinTrader):
   """Recommends selling Bitcoin for USD"""
   def compute_recommended_action(self):
-    return self.ACTION_SELL
+    return BitRecommendation(self.ACTION_SELL)
 
 class ContentTrader(BitcoinTrader):
   """Does not recommending adjusting the portfolio"""
   def compute_recommended_action(self):
-    return self.ACTION_HOLD
+    return BitRecommendation(self.ACTION_HOLD)
 
 class HoldUntilDeclineAmt(BitcoinTrader):
   """Holds Bitcoin until it begins to decline"""
@@ -132,7 +146,7 @@ class HoldUntilDeclineAmt(BitcoinTrader):
     self.decline_amt = decline_amt
 
   def compute_recommended_action(self):
-    return self.ACTION_HOLD #Fill out this logic based on historical_data
+    return BitRecommendation(self.ACTION_HOLD) #Fill out this logic based on historical_data
 
 class HoldUntilDeclinePct(BitcoinTrader):
   """Holds Bitcoin until it begins to decline"""
@@ -142,7 +156,7 @@ class HoldUntilDeclinePct(BitcoinTrader):
     self.decline_pct = decline_pct
 
   def compute_recommended_action(self):
-    return self.ACTION_HOLD #Fill out this logic based on historical_data
+    return BitRecommendation(self.ACTION_HOLD) #Fill out this logic based on historical_data
 
 class HighLowTrader(BitcoinTrader):
   """Buy low sell high"""
@@ -155,7 +169,19 @@ class HighLowTrader(BitcoinTrader):
   def compute_recommended_action(self):
     recommendation = self.ACTION_HOLD
     reason = "no action"
-    new_reason = "Last Price: " + str(self.last_price) + ", Daily Minimum: " + str(self.min_price) + ", Daily Maximum: " + str(self.max_price) + ", Range: " + str(self.get_range()) + ", Threshold: " + str(self.threshold) + ", Min Threshold: " + str(self.min_price + self.threshold * self.get_range()) + ", Max Threshold: " + str(self.max_price - self.threshold * self.get_range())
+
+    data = {
+      "last_price":self.last_price,
+      "daily_min":self.min_price,
+      "daily_max":self.max_price,
+      "range":self.get_range(),
+      "threshold":self.threshold,
+      "min_threshold":self.min_price + self.threshold * self.get_range(),
+      "max_threshold":self.max_price - self.threshold * self.get_range(),
+      "dollars":format_dollars(self.wallet.dollars),
+      "bitcoin_value":format_dollars(self.wallet.get_bitcoin_value(self.last_price)),
+      "bitcoin_qty":format_btc(self.wallet.get_bitcoin_qty())
+    }
     
     if (self.max_price - self.min_price) >= self.min_earnings:
       if self.is_at_minimum(self.threshold):
@@ -164,8 +190,7 @@ class HighLowTrader(BitcoinTrader):
       if self.is_at_maximum(self.threshold):
         recommendation = self.ACTION_SELL
         reason = str(self.last_price) + " > " + str(self.max_price - self.threshold * self.get_range())
-    reason = reason + "(dollars: " + format_dollars(self.wallet.dollars) + ", bitcoin value: " + format_dollars(self.wallet.get_bitcoin_value(self.last_price)) +  ", bitcoin qty: " + format_btc(self.wallet.get_bitcoin_qty()) + ")"
-    return (recommendation, reason) #Fill out this logic based on historical_data
+    return BitRecommendation(recommendation, reason, data) #Fill out this logic based on historical_data
 
 class StopLossTrader(BitcoinTrader):
   """Buy when stable, sell when market dips"""
@@ -188,8 +213,18 @@ class StopLossTrader(BitcoinTrader):
   def compute_recommended_action(self):   
     recommendation = self.ACTION_HOLD
     reason = "no action"
-    new_reason = "Last Price: " + str(self.last_price) + ", Daily Minimum: " + str(self.min_price) + ", Daily Maximum: " + str(self.max_price) + ", Range: " + str(self.get_range()) + ", Threshold: " + str(self.threshold) + ", Min Threshold: " + str(self.min_price + self.threshold * self.get_range()) + ", Max Threshold: " + str(self.max_price - self.threshold * self.get_range())
     is_stable = self.is_trend_stable()
+    data = {
+      "stable":is_stable,
+      "last_price":self.last_price,
+      "daily_min":self.min_price,
+      "daily_max":self.max_price,
+      "range":self.get_range(),
+      "threshold":self.threshold,
+      "min_threshold":self.min_price + self.threshold * self.get_range(),
+      "max_threshold":self.max_price - self.threshold * self.get_range()
+    }
+
     if(is_stable):
       if(self.trend == self.TREND_DECREASING and not self.has_sold_this_trend):
         reason = "stop loss"
@@ -199,5 +234,4 @@ class StopLossTrader(BitcoinTrader):
         reason = "base buy"
         recommendation = self.ACTION_BUY
         self.has_purchased_this_trend = True
-    reason = reason + ", Stable: " + str(is_stable) + ", Trend: " + str(self.trend) + ", Trend Count: " + str(self.trend_count) + " (dollars: " + format_dollars(self.wallet.dollars) + ", bitcoin value: " + format_dollars(self.wallet.get_bitcoin_value(self.last_price)) +  ", bitcoin qty: " + format_btc(self.wallet.get_bitcoin_qty()) + ")"
-    return (recommendation, reason) #Fill out this logic based on historical_data 
+    return BitRecommendation(recommendation, reason, data) #Fill out this logic based on historical_data 

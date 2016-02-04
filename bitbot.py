@@ -76,17 +76,12 @@ class BitBot:
         self.on_awake()
         time.sleep(self.data_source.query_rate)
     except KeyboardInterrupt:
-      print "Closing"
+      pass
 
-  def print_price_data(self, price, time, slope, recommendations):
+  def print_price_data(self, price, time, slope, recommendation):
     date_string = datetime.datetime.fromtimestamp(time).strftime('%Y-%m-%d %H:%M:%S')
-    rec_string = ""
-    try:
-      for rec in recommendations:
-        rec_string = rec_string + ", (" + rec[0] + "," + rec[1] + ")"
-        print date_string + "\t" + utils.format_dollars(price)  + "\t" + utils.format_slope(slope) + "\t" + rec_string
-    except ValueError:
-      return ValueError
+    print date_string + "\t" + utils.format_dollars(price)  + "\t" + utils.format_slope(slope) + "\t" + str(recommendation)
+
 
   def compute_slope(self, price, time):
     slope = 0.0
@@ -98,10 +93,10 @@ class BitBot:
     current_time = int(time.time())
     if self.last_time != current_time:
       slope = self.compute_slope(current_price, current_time)
-      recommendation = self.trader.compute_recommended_action()
-      EventManager.notify(Event("price_change", [recommendation[0]], {'price':current_price, 'time': current_time, 'slope': slope }))
+      recommendation_obj = self.trader.compute_recommended_action()
+      EventManager.notify(Event("price_change", recommendation_obj.recommendation, {'price':current_price, 'time': current_time, 'slope': slope }))
 
-      self.print_price_data(current_price, current_time, slope, [recommendation])
+      self.print_price_data(current_price, current_time, slope, recommendation_obj)
       self.last_time = current_time
       self.last_price = current_price      
 

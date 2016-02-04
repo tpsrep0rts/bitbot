@@ -27,7 +27,7 @@ def format_btc(btc):
   return  "{:.5f}".format(btc)
 
 def format_slope(slope):
-  return  "{:.5f}".format(slope)
+  return  "{:>10.5f}".format(slope)
 
 def approximately_zero(value):
   return value > -ZERO and value < ZERO
