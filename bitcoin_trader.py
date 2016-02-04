@@ -233,7 +233,7 @@ class StopLossTrader(BitcoinTrader):
     return (self.trend_count > self.trend_count_threshold)
 
   def get_header(self):
-    return ["stable",  "last_price", "daily_min", "daily_max", "range", "threshold", "min_threshold", "max_threshold"]
+    return ["stable", "daily_min", "daily_max", "range", "min_threshold", "max_threshold"]
 
   def compute_recommended_action(self):   
     recommendation = self.ACTION_HOLD
