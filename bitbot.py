@@ -65,7 +65,7 @@ class BitBot:
     self.print_db_results(self.db_results)
 
   def print_header(self):
-    print "Time\t\t\tPrice\tSlope\t\t" + self.trader.compute_recommended_action().get_header()
+    print "Time\t\t\tPrice\tSlope\t\t" + self.trader.get_recommendation().get_header()
 
   def monitor(self):
     self.print_header()
@@ -93,9 +93,8 @@ class BitBot:
     current_time = int(time.time())
     if self.last_time != current_time:
       slope = self.compute_slope(current_price, current_time)
-      recommendation_obj = self.trader.compute_recommended_action()
-      EventManager.notify(Event("price_change", recommendation_obj.recommendation, {'price':current_price, 'time': current_time, 'slope': slope }))
-
+      recommendation_obj = self.trader.get_recommendation()
+      EventManager.notify(Event("price_change", [recommendation_obj.recommendation], {'price':current_price, 'time': current_time, 'slope': slope }))
       self.print_price_data(current_price, current_time, slope, recommendation_obj)
       self.last_time = current_time
       self.last_price = current_price      
@@ -138,5 +137,5 @@ high_low_trader = HighLowTrader(wallet, [], trade_threshold, min_earnings)
 stop_loss_trader = StopLossTrader(wallet, [], trade_threshold, trend_count_threshold)
 
 #INITIALIZE
-bitbot = BitBot(wallet, random_bounce_data_source, stop_loss_trader)
+bitbot = BitBot(wallet, bitstamp_data_source, stop_loss_trader)
 bitbot.monitor()

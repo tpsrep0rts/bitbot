@@ -31,3 +31,9 @@ def format_slope(slope):
 
 def approximately_zero(value):
   return value > -ZERO and value < ZERO
+
+def merge_dictionaries(dict1, dict2):
+  result = dict1.copy()
+  for index, key in enumerate(dict2):
+    result[key] = dict2[key]
+  return result

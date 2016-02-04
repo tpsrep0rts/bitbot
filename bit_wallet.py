@@ -112,7 +112,6 @@ class BitWallet:
         print "sqlite3 error: " + str(e)
       success = True
     else:
-      print "Could not buy"
       success = False
     return success
 
