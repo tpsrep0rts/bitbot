@@ -65,12 +65,12 @@ class BitBot:
     self.print_db_results(self.db_results)
 
   def print_header(self):
-    print "Time\t\t\tPrice\tSlope\t\tRecommendation"
+    print "Time\t\t\tPrice\tSlope\t\t" + self.trader.compute_recommended_action().get_header()
 
   def monitor(self):
     self.print_header()
     self.init_monitor()
-
+    
     try:
       while True:
         self.on_awake()
@@ -110,10 +110,10 @@ class BitBot:
     if utils.format_dollars(self.last_price) != utils.format_dollars(current_price):
       self.on_price_change(current_price)
 
-  def __del__(self):
-    for db in DB.conn:
-      DB.conn[db].commit()
-      DB.conn[db].close()
+#  def __del__(self):
+#    for db in DB.conn:
+#      DB.conn[db].commit()
+#      DB.conn[db].close()
 
 
 DB.query(DB.WALLET_DB, "DELETE FROM investments")

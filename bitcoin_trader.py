@@ -4,18 +4,37 @@ from utils import *
 from event_manager import *
 
 class BitRecommendation(object):
-  def __init__(self, recommendation, reason=None, data = {}):
+  def __init__(self, recommendation, reason=None, data = {}, header = []):
     self.recommendation = recommendation
     self.reason = reason
     self.data = data
+    self.data["recommendation"] = recommendation
+    self.data["reason"] = reason
+    self.header = ["recommendation", "reason"] + header
+
+  def format_column(self, column):
+    return "{:>10}".format(str(column))
+
+  def format_array(self, data):
+    result_data = []
+    for column in data:
+      result_data.append(self.format_column(column))
+    return self.format_row(result_data)
+
+  def get_header(self):
+    return self.format_array(self.header)
+
+  def format_row(self, data):
+    return "\t".join(data)
+
+  def get_mapped_columns(self):
+    result_data = []
+    for key in self.header:
+      result_data.append(self.format_column(self.data[key]))
+    return result_data
 
   def __str__(self):
-    result = [
-      self.recommendation,
-      self.reason,
-      str(self.data)
-    ]
-    return ", ".join(result)
+    return self.format_row(self.get_mapped_columns())
 
 class BitcoinTrader(object):
   """Base class for Bitcoin trading behaviors"""
@@ -105,6 +124,9 @@ class BitcoinTrader(object):
     if(not self.trend == trend and not self.trend == self.TREND_FLAT):
       trend = self.TREND_FLAT
     return trend
+
+  def get_header(self):
+    pass
 
   def handle_trend_disruption(self, old_trend, new_trend):
     pass
@@ -210,19 +232,22 @@ class StopLossTrader(BitcoinTrader):
   def is_trend_stable(self):
     return (self.trend_count > self.trend_count_threshold)
 
+  def get_header(self):
+    return ["stable",  "last_price", "daily_min", "daily_max", "range", "threshold", "min_threshold", "max_threshold"]
+
   def compute_recommended_action(self):   
     recommendation = self.ACTION_HOLD
     reason = "no action"
     is_stable = self.is_trend_stable()
     data = {
       "stable":is_stable,
-      "last_price":self.last_price,
-      "daily_min":self.min_price,
-      "daily_max":self.max_price,
-      "range":self.get_range(),
+      "last_price":format_dollars(self.last_price),
+      "daily_min":format_dollars(self.min_price),
+      "daily_max":format_dollars(self.max_price),
+      "range":format_dollars(self.get_range()),
       "threshold":self.threshold,
-      "min_threshold":self.min_price + self.threshold * self.get_range(),
-      "max_threshold":self.max_price - self.threshold * self.get_range()
+      "min_threshold":format_dollars(self.min_price + self.threshold * self.get_range()),
+      "max_threshold":format_dollars(self.max_price - self.threshold * self.get_range())
     }
 
     if(is_stable):
@@ -234,4 +259,4 @@ class StopLossTrader(BitcoinTrader):
         reason = "base buy"
         recommendation = self.ACTION_BUY
         self.has_purchased_this_trend = True
-    return BitRecommendation(recommendation, reason, data) #Fill out this logic based on historical_data 
+    return BitRecommendation(recommendation, reason, data, self.get_header()) #Fill out this logic based on historical_data 
