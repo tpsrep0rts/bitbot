@@ -5,7 +5,7 @@ import requests,json
 class BitDataSource(object):
   def __init__(self, should_persist=False, query_rate=1.0):
     self.should_persist = should_persist
-    self.query_rate = query_rate
+    self.query_rate     = query_rate
 
   def query(self):
     return 0.0
@@ -25,8 +25,8 @@ class BitstampDataSource(BitDataSource):
 
 class LinearDataSource(BitDataSource):
   def __init__(self, start_price = 420.00, growth_rate = 1.0, query_rate=1.0):
-    self.last_price = start_price
-    self.growth_rate = growth_rate
+    self.last_price   = start_price
+    self.growth_rate  = growth_rate
     super(LinearDataSource, self).__init__(False, query_rate)
 
   def query(self):
@@ -35,10 +35,10 @@ class LinearDataSource(BitDataSource):
 
 class BounceDataSource(BitDataSource):
   def __init__(self, start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=1.0):
-    self.last_price = start_price
-    self.growth_rate = growth_rate
-    self.min_price = min_price
-    self.max_price = max_price
+    self.last_price   = start_price
+    self.growth_rate  = growth_rate
+    self.min_price    = min_price
+    self.max_price    = max_price
 
     self.current_growth_rate = growth_rate
     super(BounceDataSource, self).__init__(False, query_rate)

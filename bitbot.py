@@ -102,12 +102,12 @@ class BitBot:
   def on_awake(self):
     try:
       current_price = self.data_source.query()
+      if utils.format_dollars(self.last_price) != utils.format_dollars(current_price):
+        self.on_price_change(current_price)
     except ValueError:
       print "Error querying Bitstamp API"
     except requests.ConnectionError:
       print "Error querying Bitstamp API"
-    if utils.format_dollars(self.last_price) != utils.format_dollars(current_price):
-      self.on_price_change(current_price)
 
 #  def __del__(self):
 #    for db in DB.conn:

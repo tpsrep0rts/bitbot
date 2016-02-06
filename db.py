@@ -2,8 +2,8 @@ import os, sys
 import sqlite3
 import utils
 class DB(object):
-  BITCOIN_DB = 'bitcoin.sqlite'
-  WALLET_DB = 'investments.sqlite'
+  BITCOIN_DB  = 'bitcoin.sqlite'
+  WALLET_DB   = 'investments.sqlite'
 
   conn = {}
   c = {}
