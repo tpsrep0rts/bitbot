@@ -54,11 +54,10 @@ class BitcoinTrader(object):
     self.last_price = 0.0
     self.last_slope = 0.0
     self.trend = self.TREND_FLAT
-    self.trend_count = 0
     self.max_price = 0.0
     self.min_price = 999999999.0
     self.wallet = wallet
-    self.target_profit_margin = 0.03
+    self.target_profit_margin = 0.001
     self.data = {}
     self.historical_data = []
     self.recommendation = self.ACTION_HOLD
@@ -243,6 +242,7 @@ class StopLossTrader(BitcoinTrader):
     super(StopLossTrader, self).__init__(wallet, db_results)
     self.threshold = threshold
     self.trend_count_threshold = trend_count_threshold
+    self.trend_count = 0
     self.next_recommendation = self.ACTION_HOLD
     self.has_purchased_this_trend = False
     self.has_sold_this_trend = False
@@ -255,11 +255,11 @@ class StopLossTrader(BitcoinTrader):
     return (self.trend_count > self.trend_count_threshold)
 
   def get_header(self):
-    return ["stable",  "dollars", "bitcoin_value", "bitcoin_qty"]
+    return ["stable",  "trend_count", "dollars", "bitcoin_value", "bitcoin_qty"]
 
   def get_data(self):
     return {
-      "trend_count_threshold":self.trend_count_threshold,
+      "trend_count":self.trend_count,
       "threshold":self.threshold,
       "stable":self.is_trend_stable()
     }
