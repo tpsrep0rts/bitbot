@@ -36,6 +36,7 @@ class BitcoinTrader(object):
     self.min_price            = 999999999.0
     self.wallet               = wallet
     self.target_profit_margin = 0.001
+    self.investment_rate      = 0.5
     self.data                 = {}
     self.historical_data      = []
     self.recommendation       = self.ACTION_HOLD
@@ -53,7 +54,7 @@ class BitcoinTrader(object):
       self.COLUMN_LAST_PRICE:self.last_price,
       self.COLUMN_DOLLARS       : format_dollars(self.wallet.dollars),
       self.COLUMN_BITCOIN_VALUE : format_dollars(self.wallet.get_bitcoin_value(self.last_price)),
-      self.COLUMN_BITCOIN_QTY   : format_btc(self.wallet.get_bitcoin_qty()+self.wallet.get_bitcoin_value(self.last_price)),
+      self.COLUMN_BITCOIN_QTY   : format_btc(self.wallet.get_bitcoin_qty()),
       self.COLUMN_TOTAL         : format_dollars(self.wallet.dollars),
       self.COLUMN_DAILY_MIN     : self.min_price,
       self.COLUMN_DAILY_MAX     : self.max_price,
@@ -82,8 +83,7 @@ class BitcoinTrader(object):
       del self.historical_data[:length - self.MAX_HISTORY]
 
   def handle_buy_recommendation(self, event):
-    investment_rate = 0.5
-    investable_cash = self.wallet.dollars * investment_rate
+    investable_cash = self.wallet.dollars * self.investment_rate
     bitcoin_qty     = investable_cash / event.metadata['price']
     self.wallet.purchase_bitcoin(bitcoin_qty, event.metadata['price'])
     
