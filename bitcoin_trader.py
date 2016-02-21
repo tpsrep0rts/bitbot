@@ -192,7 +192,13 @@ class HighLowTrader(BitcoinTrader):
   """Buy low sell high"""
   COLUMN_MIN_EARNINGS  = "min_earnings"
   COLUMN_THRESHOLD      = "threshold"
-  
+ 
+  @staticmethod
+  def from_config(config, wallet, db_results = []):
+    min_earnings = config.getfloat("HighLowTrader", "minearningspershare")
+    trade_threshold = config.getfloat("HighLowTrader", "priceequivalencythreshold")
+    return HighLowTrader(wallet, db_results, trade_threshold, min_earnings)
+ 
   def __init__(self, wallet, db_results, threshold, min_earnings):
     super(HighLowTrader, self).__init__(wallet, db_results)
     self.threshold    = threshold
@@ -221,6 +227,12 @@ class StopLossTrader(BitcoinTrader):
   COLUMN_TREND_COUNT  = "trend_count"
   COLUMN_THRESHOLD    = "threshold"
   COLUMN_STABLE       = "stable"
+
+  @staticmethod
+  def from_config(config, wallet, db_results = []):
+    trade_threshold = config.getfloat("StopLossTrader", "priceequivalencythreshold")
+    trend_count_threshold = config.getint("StopLossTrader", "trendcountthreshold")
+    return StopLossTrader(wallet, db_results, trade_threshold, trend_count_threshold)
 
   def __init__(self, wallet, db_results, threshold, trend_count_threshold):
     super(StopLossTrader, self).__init__(wallet, db_results)

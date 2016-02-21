@@ -109,32 +109,22 @@ class BitBot:
     except requests.ConnectionError:
       print "Error querying Bitstamp API"
 
-#  def __del__(self):
-#    for db in DB.conn:
-#      DB.conn[db].commit()
-#      DB.conn[db].close()
-
 
 DB.query(DB.WALLET_DB, "DELETE FROM investments")
 
 #INPUTS
-starting_cash = 1000.00
-wallet = BitWallet(starting_cash)
 config = BitConfig()
+starting_cash = config.getfloat("BitBot", "startcash")
+wallet = BitWallet(starting_cash)
 
 # DATA SOURCES
 bitstamp_data_source = BitstampDataSource()
-linear_data_source = LinearDataSource(start_price = 420.00, growth_rate = 1.0, query_rate=1)
-bounce_data_source = BounceDataSource(start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=0.1)
-random_bounce_data_source = RandomBounceDataSource(random_threshold = 0.001, start_price = 420.00, min_price= 300.00, max_price=500.00, growth_rate = 1.0, query_rate=0.1)
+linear_data_source = LinearDataSource.from_config(config)
+bounce_data_source = BounceDataSource.from_config(config)
+random_bounce_data_source = RandomBounceDataSource(config)
 
-#TRADERS
-min_earnings = config.getfloat("Trader", "minearningspershare")
-trade_threshold = config.getfloat("Trader", "priceequivalencythreshold")
-trend_count_threshold = config.getint("Trader", "trendcountthreshold")
-
-high_low_trader = HighLowTrader(wallet, [], trade_threshold, min_earnings)
-stop_loss_trader = StopLossTrader(wallet, [], trade_threshold, trend_count_threshold)
+high_low_trader = HighLowTrader.from_config(config, wallet)
+stop_loss_trader = StopLossTrader.from_config(config, wallet)
 
 #INITIALIZE
 bitbot = BitBot(wallet, bitstamp_data_source, stop_loss_trader)
