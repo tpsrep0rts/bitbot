@@ -22,17 +22,55 @@ class BitBot:
   CREATE_TABLE_QUERY = "CREATE TABLE bitcoin_prices(id INTEGER PRIMARY KEY AUTOINCREMENT, quote_time INTEGER, price FLOAT, slope FLOAT DEFAULT 0);"
   RECENT_PRICES_QUERY = 'SELECT quote_time, price, slope FROM bitcoin_prices WHERE quote_time >= {min_quote_time} AND quote_time <= {max_quote_time} ORDER BY quote_time ASC'
 
-  def __init__(self, wallet, data_source, trader):
+  def get_data_source(self, config):
+    data_sources = {
+      "BitstampDataSource":  BitstampDataSource(),
+      "LinearDataSource":  LinearDataSource.from_config(config),
+      "BounceDataSource":  BounceDataSource.from_config(config),
+      "RandomBounceDataSource": RandomBounceDataSource.from_config(config)
+    }
+
+    data_source_string = config.get("BitBot", "selecteddatasource")
+    if data_source_string in data_sources:
+      selected_data_source = data_sources[data_source_string]
+    else:
+      print "Data source not found: " + data_source_string
+      selected_data_source = data_sources["BitstampDataSource"]
+    return selected_data_source
+
+  def get_trader(self, config, wallet, db_results = []):
+    traders = {
+      "HighLowTrader":  HighLowTrader.from_config(config, wallet, db_results),
+      "StopLossTrader":  StopLossTrader.from_config(config, wallet, db_results)
+    }
+
+    trader_string = config.get("BitBot", "selectedtrader")
+    if trader_string in traders:
+      selected_trader = traders[trader_string]
+    else:
+      print "Trader not found: " + trader_string
+      selected_trader = traders["StopLossTrader"]
+    return selected_trader
+
+  def get_wallet(self, config):
+    return BitWallet.from_config(config)
+
+  def __init__(self):
+    DB.query(DB.WALLET_DB, "DELETE FROM investments")
+
+
     self.last_price = 0.0
     self.last_time = 0
-    self.trader = trader
-    self.trader.register_listeners()
 
-    self.wallet = wallet
     current_time = int(time.time())
     query = self.RECENT_PRICES_QUERY.format(min_quote_time=int(current_time - self.SECONDS_PER_HOUR), max_quote_time=int(current_time))
     self.db_results = DB.query(DB.BITCOIN_DB, query)
-    self.data_source = data_source
+
+    self.config = BitConfig()
+    self.data_source = self.get_data_source(self.config)
+    self.wallet = self.get_wallet(self.config)
+    self.trader = self.get_trader(self.config, self.wallet, self.db_results)
+    self.trader.register_listeners()
 
     if(self.data_source.should_persist):
       EventManager.add_subscription("price_change", [], self.handle_price_event)
@@ -109,23 +147,5 @@ class BitBot:
     except requests.ConnectionError:
       print "Error querying Bitstamp API"
 
-
-DB.query(DB.WALLET_DB, "DELETE FROM investments")
-
-#INPUTS
-config = BitConfig()
-starting_cash = config.getfloat("BitBot", "startcash")
-wallet = BitWallet(starting_cash)
-
-# DATA SOURCES
-bitstamp_data_source = BitstampDataSource()
-linear_data_source = LinearDataSource.from_config(config)
-bounce_data_source = BounceDataSource.from_config(config)
-random_bounce_data_source = RandomBounceDataSource(config)
-
-high_low_trader = HighLowTrader.from_config(config, wallet)
-stop_loss_trader = StopLossTrader.from_config(config, wallet)
-
-#INITIALIZE
-bitbot = BitBot(wallet, bitstamp_data_source, stop_loss_trader)
+bitbot = BitBot()
 bitbot.monitor()

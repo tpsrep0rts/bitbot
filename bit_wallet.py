@@ -35,6 +35,11 @@ class BitWallet:
   INSERT_QUERY = "INSERT INTO investments (qty, price, purchase_time) VALUES ('{bitcoin_qty}', '{bitcoin_price}', '{ptime}');"
   DELETE_QUERY = "DELETE FROM investments WHERE id='{id}';"
 
+  @staticmethod
+  def from_config(config):
+    starting_cash = config.getfloat("BitWallet", "startcash")
+    return BitWallet(starting_cash)
+
   def __init__(self, dollars = 0, reset_data = False):
     self.conn = sqlite3.connect( os.getcwd() + os.path.sep + 'investments.sqlite')
     self.c = self.conn.cursor()
